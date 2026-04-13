@@ -1,0 +1,3 @@
+nome;email;senha;nivel
+Water Falls;waterfalls@empresa.com;123456;gestor
+Matteo Ludovino;matteo@empresa.com;abcdef;admin

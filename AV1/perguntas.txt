@@ -1,0 +1,9 @@
+tipo;pergunta;opcao1;opcao2;opcao3;opcao4;resposta_correta
+multipla;Qual a melhor forma de motivar uma equipe desanimada?;Aumentar salário;Dar feedback positivo;Ignorar o problema;Punir os atrasos;Dar feedback positivo
+multipla;Como lidar com um funcionário que sempre atrasa?;Demitir imediatamente;Conversar em particular;Ignorar;Punir publicamente;Conversar em particular
+multipla;Qual a prioridade em um projeto atrasado?;Entregar de qualquer jeito;Redefinir cronograma;Trabalhar fins de semana;Cortar qualidade;Redefinir cronograma
+texto;Descreva uma situação de conflito que você resolveu e como fez isso.;;
+texto;Como você faria para melhorar a comunicação na equipe?;;
+multipla;O que fazer quando um cliente está insatisfeito?;Ignorar reclamação;Transferir para outro setor;Ouvir e buscar solução;Dar desconto;Ouvir e buscar solução
+multipla;Qual característica é essencial para um líder?;Ser autoritário;Saber delegar;Fazer tudo sozinho;Evitar reuniões;Saber delegar
+texto;Qual estratégia você usaria para reduzir custos sem demitir?;;
