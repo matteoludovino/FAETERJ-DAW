@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Calc</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&family=Space+Grotesk:wght@400;500;600&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(145deg, #1a1e25 0%, #12151c 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      padding: 1.5rem;
+      margin: 0;
+    }
+
+    .calc-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .calculator {
+      background: #1e2230;
+      border-radius: 32px;
+      padding: 1.5rem 1.25rem 1.75rem;
+      width: 340px;
+      max-width: 100%;
+      box-shadow: 0 20px 35px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      border: 1px solid #2c3142;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      transition: all 0.2s ease;
+    }
+
+    .display-panel {
+      background: #151922;
+      border-radius: 20px;
+      padding: 1.2rem 1.2rem 0.9rem;
+      border: 1px solid #2d3343;
+      box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      min-height: 100px;
+      justify-content: space-between;
+      word-break: break-word;
+    }
+
+    .expression {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 400;
+      font-size: 0.9rem;
+      color: #5e667b;
+      letter-spacing: 0.5px;
+      min-height: 20px;
+      text-align: right;
+      width: 100%;
+      opacity: 0.8;
+      transition: color 0.2s;
+    }
+
+    .main-result {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 500;
+      font-size: 2.7rem;
+      color: #f2f4f8;
+      text-align: right;
+      width: 100%;
+      line-height: 1.1;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+      letter-spacing: -0.5px;
+      transition: color 0.15s;
+    }
+
+    .main-result::-webkit-scrollbar {
+      display: none;
+    }
+
+    .buttons-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.65rem;
+    }
+
+    .btn {
+      background: #262b38;
+      border: none;
+      border-radius: 18px;
+      height: 60px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 500;
+      font-size: 1.4rem;
+      color: #e2e6ef;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      backdrop-filter: blur(2px);
+      border: 1px solid #323848;
+      letter-spacing: 0.3px;
+    }
+
+    .btn:active {
+      transform: scale(0.94);
+      background: #2f3545;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .btn-number {
+      background: #2a2f3d;
+      color: #f0f3fa;
+      border: 1px solid #383e50;
+      font-weight: 500;
+    }
+
+    .btn-number:hover {
+      background: #323848;
+      border-color: #4a5065;
+    }
+
+    .btn-operator {
+      background: #2c3140;
+      color: #cba258;
+      border: 1px solid #4a4233;
+      font-weight: 600;
+      font-size: 1.5rem;
+    }
+
+    .btn-operator:hover {
+      background: #383e4e;
+      color: #e5b86b;
+    }
+
+    .btn-clear-control {
+      background: #2a2835;
+      color: #c7767e;
+      border: 1px solid #4a3640;
+      font-weight: 600;
+    }
+
+    .btn-clear-control:hover {
+      background: #332e3c;
+      color: #e09199;
+    }
+
+    .btn-equals {
+      background: #cba258;
+      color: #1a1d26;
+      border: none;
+      font-weight: 600;
+      font-size: 1.8rem;
+      box-shadow: 0 6px 12px rgba(203, 162, 88, 0.25);
+      border: 1px solid #dfb66b;
+    }
+
+    .btn-equals:hover {
+      background: #d9af5c;
+      filter: brightness(1.05);
+    }
+
+    .btn-zero {
+      grid-column: span 2;
+      justify-content: center;
+    }
+
+    @media (max-width: 380px) {
+      .calculator {
+        width: 100%;
+        padding: 1.2rem;
+      }
+      .btn {
+        height: 52px;
+        font-size: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="calc-wrapper">
+  <div class="calculator" role="application" aria-label="Calculadora">
+    <div class="display-panel">
+      <div class="expression" id="expressionDisplay"></div>
+      <div class="main-result" id="resultDisplay">0</div>
+    </div>
+
+    <div class="buttons-grid">
+      <button class="btn btn-clear-control" onclick="handleClear()">AC</button>
+      <button class="btn btn-clear-control" onclick="handleBackspace()">⌫</button>
+      <button class="btn btn-operator" onclick="handleOperator('%')">%</button>
+      <button class="btn btn-operator" onclick="handleOperator('÷')">÷</button>
+
+      <button class="btn btn-number" onclick="handleNumber('7')">7</button>
+      <button class="btn btn-number" onclick="handleNumber('8')">8</button>
+      <button class="btn btn-number" onclick="handleNumber('9')">9</button>
+      <button class="btn btn-operator" onclick="handleOperator('×')">×</button>
+
+      <button class="btn btn-number" onclick="handleNumber('4')">4</button>
+      <button class="btn btn-number" onclick="handleNumber('5')">5</button>
+      <button class="btn btn-number" onclick="handleNumber('6')">6</button>
+      <button class="btn btn-operator" onclick="handleOperator('−')">−</button>
+
+      <button class="btn btn-number" onclick="handleNumber('1')">1</button>
+      <button class="btn btn-number" onclick="handleNumber('2')">2</button>
+      <button class="btn btn-number" onclick="handleNumber('3')">3</button>
+      <button class="btn btn-operator" onclick="handleOperator('+')">+</button>
+
+      <button class="btn btn-number btn-zero" onclick="handleNumber('0')">0</button>
+      <button class="btn btn-number" onclick="handleDecimal()">,</button>
+      <button class="btn btn-equals" onclick="handleEquals()">=</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const state = {
+      current: '0',
+      previous: '',
+      operator: '',
+      shouldReset: false
+    };
+
+    const resultEl = document.getElementById('resultDisplay');
+    const expressionEl = document.getElementById('expressionDisplay');
+
+    function refreshUI() {
+      resultEl.textContent = state.current;
+
+      if (state.previous && state.operator) {
+        expressionEl.textContent = `${state.previous} ${state.operator}`;
+      } else {
+        expressionEl.textContent = '';
+      }
+    }
+
+    window.handleNumber = function(num) {
+      if (state.current === 'Erro') {
+        state.current = '0';
+        state.shouldReset = false;
+      }
+
+      if (state.shouldReset) {
+        state.current = num;
+        state.shouldReset = false;
+      } else {
+        if (state.current === '0' && num !== '0') {
+          state.current = num;
+        } else if (state.current === '0' && num === '0') {
+        } else {
+          state.current += num;
+        }
+      }
+      refreshUI();
+    };
+
+    window.handleDecimal = function() {
+      if (state.current === 'Erro') {
+        state.current = '0';
+        state.shouldReset = false;
+      }
+
+      if (state.shouldReset) {
+        state.current = '0,';
+        state.shouldReset = false;
+        refreshUI();
+        return;
+      }
+
+      if (!state.current.includes(',')) {
+        state.current += ',';
+      }
+      refreshUI();
+    };
+
+    window.handleOperator = function(op) {
+      if (state.current === 'Erro') {
+        state.previous = '';
+        state.operator = '';
+        state.current = '0';
+        state.shouldReset = false;
+        refreshUI();
+        return;
+      }
+
+      if (state.operator && !state.shouldReset) {
+        performCalculation(false);
+      }
+
+      state.previous = state.current;
+      state.operator = op;
+      state.shouldReset = true;
+      refreshUI();
+    };
+
+    function performCalculation(finalize = true) {
+      if (!state.operator || state.shouldReset) return;
+
+      const prev = parseFloat(state.previous.replace(',', '.'));
+      const curr = parseFloat(state.current.replace(',', '.'));
+      let result;
+
+      if (isNaN(prev) || isNaN(curr)) {
+        state.current = 'Erro';
+        if (finalize) resetOperatorState();
+        refreshUI();
+        return;
+      }
+
+      switch (state.operator) {
+        case '+':
+          result = prev + curr;
+          break;
+        case '−':
+          result = prev - curr;
+          break;
+        case '×':
+          result = prev * curr;
+          break;
+        case '÷':
+          result = curr !== 0 ? prev / curr : 'Erro';
+          break;
+        case '%':
+          result = prev * (curr / 100);
+          break;
+        default:
+          result = curr;
+      }
+
+      if (result === 'Erro') {
+        state.current = 'Erro';
+      } else {
+        let resultStr = result.toString().replace('.', ',');
+        if (resultStr.length > 12) {
+          const numResult = parseFloat(result.toPrecision(10));
+          resultStr = numResult.toString().replace('.', ',');
+          if (resultStr.length > 12) {
+            resultStr = numResult.toExponential(5).replace('.', ',');
+          }
+        }
+        state.current = resultStr;
+      }
+
+      if (finalize) {
+        resetOperatorState();
+      }
+
+      if (!finalize) {
+        state.previous = state.current;
+      }
+      state.shouldReset = true;
+      refreshUI();
+    }
+
+    function resetOperatorState() {
+      state.previous = '';
+      state.operator = '';
+    }
+
+    window.handleEquals = function() {
+      if (state.current === 'Erro') {
+        state.current = '0';
+        resetOperatorState();
+        state.shouldReset = false;
+        refreshUI();
+        return;
+      }
+      if (state.operator && !state.shouldReset) {
+        performCalculation(true);
+      } else {
+        refreshUI();
+      }
+    };
+
+    window.handleClear = function() {
+      state.current = '0';
+      state.previous = '';
+      state.operator = '';
+      state.shouldReset = false;
+      refreshUI();
+    };
+
+    window.handleBackspace = function() {
+      if (state.current === 'Erro') {
+        state.current = '0';
+        state.shouldReset = false;
+        refreshUI();
+        return;
+      }
+
+      if (state.shouldReset) {
+        state.current = '0';
+        state.shouldReset = false;
+      } else {
+        if (state.current.length > 1) {
+          state.current = state.current.slice(0, -1);
+        } else {
+          state.current = '0';
+        }
+      }
+      refreshUI();
+    };
+
+    document.addEventListener('keydown', function(e) {
+      const key = e.key;
+      
+      if (key >= '0' && key <= '9') {
+        e.preventDefault();
+        handleNumber(key);
+      } else if (key === '+') {
+        e.preventDefault();
+        handleOperator('+');
+      } else if (key === '-') {
+        e.preventDefault();
+        handleOperator('−');
+      } else if (key === '*') {
+        e.preventDefault();
+        handleOperator('×');
+      } else if (key === '/') {
+        e.preventDefault();
+        handleOperator('÷');
+      } else if (key === '%') {
+        e.preventDefault();
+        handleOperator('%');
+      } else if (key === 'Enter' || key === '=') {
+        e.preventDefault();
+        handleEquals();
+      } else if (key === 'Backspace') {
+        e.preventDefault();
+        handleBackspace();
+      } else if (key === 'Escape') {
+        e.preventDefault();
+        handleClear();
+      } else if (key === ',' || key === '.') {
+        e.preventDefault();
+        handleDecimal();
+      }
+    });
+
+    refreshUI();
+  })();
+</script>
+</body>
+</html>
