@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Pergunta</title>
+</head>
+<body>
+    <h2>Editar Pergunta</h2>
+    <div id="formContainer">Carregando...</div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const perguntaAlvo = urlParams.get('pergunta');
+        
+        async function carregarPergunta() {
+            if (!perguntaAlvo) {
+                document.getElementById('formContainer').innerHTML = 'Pergunta não encontrada! <a href="/listar_perguntas">Voltar</a>';
+                return;
+            }
+            
+            const response = await fetch(`/api/pergunta/${encodeURIComponent(perguntaAlvo)}`);
+            const dados = await response.json();
+            
+            if (!dados) {
+                document.getElementById('formContainer').innerHTML = 'Pergunta não encontrada! <a href="/listar_perguntas">Voltar</a>';
+                return;
+            }
+            
+            let formHtml = `
+                <form action="/atualizar_pergunta" method="POST">
+                    <input type="hidden" name="pergunta_antiga" value="${escapeHtml(dados[1])}">
+                    <input type="hidden" name="tipo" value="${escapeHtml(dados[0])}">
+
+                    <label>Pergunta:</label><br>
+                    <input type="text" name="pergunta" value="${escapeHtml(dados[1])}" size="80" required><br><br>
+            `;
+            
+            if (dados[0] === 'multipla') {
+                formHtml += `
+                    <label>Opção 1:</label><br>
+                    <input type="text" name="opcao1" value="${escapeHtml(dados[2] || '')}"><br>
+                    <label>Opção 2:</label><br>
+                    <input type="text" name="opcao2" value="${escapeHtml(dados[3] || '')}"><br>
+                    <label>Opção 3:</label><br>
+                    <input type="text" name="opcao3" value="${escapeHtml(dados[4] || '')}"><br>
+                    <label>Opção 4:</label><br>
+                    <input type="text" name="opcao4" value="${escapeHtml(dados[5] || '')}"><br>
+                    <label>Resposta Correta:</label><br>
+                    <input type="text" name="resposta_correta" value="${escapeHtml(dados[6] || '')}"><br><br>
+                `;
+            }
+            
+            formHtml += `
+                    <button type="submit">Salvar Alterações</button>
+                    <a href="/listar_perguntas">Cancelar</a>
+                </form>
+            `;
+            
+            document.getElementById('formContainer').innerHTML = formHtml;
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        carregarPergunta();
+    </script>
+</body>
+</html>

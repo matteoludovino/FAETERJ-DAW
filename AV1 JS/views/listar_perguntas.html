@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Listar Perguntas</title>
+    <style>
+        table, th, td { border: 1px solid black; border-collapse: collapse; padding: 10px; }
+        th { background-color: #eee; }
+        .btn-add { display: inline-block; margin-bottom: 15px; text-decoration: none; color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Perguntas do Jogo</h1>
+    <a href="/cadastrar_pergunta" class="btn-add">+ Criar Nova Pergunta</a>
+
+    <table>
+        <thead>
+            <tr><th>Tipo</th><th>Pergunta</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="listaPerguntas"></tbody>
+    </table>
+
+    <script>
+        async function carregarPerguntas() {
+            const response = await fetch('/api/perguntas');
+            const perguntas = await response.json();
+            
+            const tbody = document.getElementById('listaPerguntas');
+            tbody.innerHTML = '';
+            
+            perguntas.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${escapeHtml(item.tipo)}</td>
+                    <td>${escapeHtml(item.pergunta)}</td>
+                    <td>
+                        <a href="/visualizar_pergunta?pergunta=${encodeURIComponent(item.pergunta)}">Ver</a>
+                        <a href="/editar_pergunta?pergunta=${encodeURIComponent(item.pergunta)}">Editar</a>
+                        <a href="/excluir_pergunta?pergunta=${encodeURIComponent(item.pergunta)}" onclick='return confirm("Tem certeza?")' style='color:red;'>Excluir</a>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        carregarPerguntas();
+    </script>
+</body>
+</html>

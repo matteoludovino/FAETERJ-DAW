@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Usuário</title>
+</head>
+<body>
+    <h2>Editar Usuário</h2>
+    <div id="formContainer">Carregando...</div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const emailAlvo = urlParams.get('email');
+        
+        async function carregarUsuario() {
+            if (!emailAlvo) {
+                document.getElementById('formContainer').innerHTML = 'Usuário não encontrado! <a href="/listar_usuarios">Voltar</a>';
+                return;
+            }
+            
+            const response = await fetch(`/api/usuario/${encodeURIComponent(emailAlvo)}`);
+            const dados = await response.json();
+            
+            if (!dados) {
+                document.getElementById('formContainer').innerHTML = 'Usuário não encontrado! <a href="/listar_usuarios">Voltar</a>';
+                return;
+            }
+            
+            document.getElementById('formContainer').innerHTML = `
+                <form action="/atualizar_usuario" method="POST">
+                    <input type="hidden" name="email_antigo" value="${escapeHtml(dados[1])}">
+                    
+                    <label>Nome:</label><br>
+                    <input type="text" name="nome" value="${escapeHtml(dados[0])}" required><br><br>
+
+                    <label>Email:</label><br>
+                    <input type="email" name="email" value="${escapeHtml(dados[1])}" required><br><br>
+
+                    <label>Senha:</label><br>
+                    <input type="password" name="senha" value="${escapeHtml(dados[2])}" required><br><br>
+
+                    <label>Nível:</label><br>
+                    <select name="nivel">
+                        <option value="gestor" ${dados[3] == 'gestor' ? 'selected' : ''}>Gestor</option>
+                        <option value="admin" ${dados[3] == 'admin' ? 'selected' : ''}>Administrador</option>
+                    </select><br><br>
+
+                    <button type="submit">Salvar Alterações</button>
+                    <a href="/listar_usuarios">Cancelar</a>
+                </form>
+            `;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        carregarUsuario();
+    </script>
+</body>
+</html>

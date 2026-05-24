@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Listar Usuários</title>
+    <style>
+        table, th, td { border: 1px solid black; border-collapse: collapse; padding: 10px; }
+        th { background-color: #eee; }
+        .btn-add { display: inline-block; margin-bottom: 15px; text-decoration: none; color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Usuários do Sistema</h1>
+    <a href="/cadastrar_usuario" class="btn-add">+ Novo Usuário</a>
+    <a href="/listar_perguntas" style="margin-left: 15px;">Gerenciar Perguntas</a>
+
+    <table id="tabelaUsuarios">
+        <thead>
+            <tr><th>Nome</th><th>Email</th><th>Nível</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="listaUsuarios"></tbody>
+    </table>
+
+    <script>
+        async function carregarUsuarios() {
+            const response = await fetch('/api/usuarios');
+            const usuarios = await response.json();
+            
+            const tbody = document.getElementById('listaUsuarios');
+            tbody.innerHTML = '';
+            
+            usuarios.forEach(usuario => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${escapeHtml(usuario.nome)}</td>
+                    <td>${escapeHtml(usuario.email)}</td>
+                    <td>${escapeHtml(usuario.nivel)}</td>
+                    <td>
+                        <a href="/editar_usuario?email=${encodeURIComponent(usuario.email)}">Editar</a>
+                        <a href="/excluir_usuario?email=${encodeURIComponent(usuario.email)}" 
+                           onclick='return confirm("Tem certeza?")' 
+                           style='color:red;'>Excluir</a>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        carregarUsuarios();
+    </script>
+</body>
+</html>
