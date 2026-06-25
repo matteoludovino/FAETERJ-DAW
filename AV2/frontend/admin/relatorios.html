@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatórios — Falls Car Admin</title>
+  <link rel="stylesheet" href="../../css/main.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-mobile-menu" onclick="toggleMobileMenu()">☰</button>
+        <div>
+          <div class="page-title">Relatórios</div>
+          <div class="page-subtitle">Análise financeira e operacional</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <select id="periodo-ano" class="form-control" onchange="loadFinanceiro()" style="width:auto">
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('financeiro', this)">💰 Financeiro</button>
+        <button class="tab-btn" onclick="switchTab('reservas', this)">📋 Reservas</button>
+        <button class="tab-btn" onclick="switchTab('veiculos', this)">🚗 Frota</button>
+      </div>
+
+      <div id="tab-financeiro">
+        <div class="stats-grid" id="stats-financeiro">
+          <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value">—</div><div class="stat-label">Receita Total Ano</div></div>
+          <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-value">—</div><div class="stat-label">Melhor Mês</div></div>
+          <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-value">—</div><div class="stat-label">Média Mensal</div></div>
+          <div class="stat-card"><div class="stat-icon">🏪</div><div class="stat-value">—</div><div class="stat-label">Lojas Ativas</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:var(--sp-lg)">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Receita Mensal</div>
+            </div>
+            <div class="card-body" style="padding-top:0">
+              <div id="chart-mensal" style="height:200px;display:flex;align-items:flex-end;gap:6px">
+                <div class="loading"><div class="spinner"></div></div>
+              </div>
+              <div id="chart-labels" style="display:flex;gap:6px;margin-top:8px"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Por Categoria</div>
+            </div>
+            <div class="card-body" id="por-categoria">
+              <div class="loading"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:0">
+          <div class="card-header"><div class="card-title">Receita por Loja</div></div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Loja</th><th>Cidade</th><th>Reservas</th><th>Receita</th></tr></thead>
+              <tbody id="tbody-lojas"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-reservas" class="hidden">
+        <div class="filters-bar" style="margin-bottom:var(--sp-lg)">
+          <input type="date" id="res-de"  class="form-control" style="width:auto">
+          <input type="date" id="res-ate" class="form-control" style="width:auto">
+          <button class="btn btn-primary btn-sm" onclick="loadReservas()">Filtrar</button>
+        </div>
+        <div class="card">
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>#</th><th>Cliente</th><th>Veículo</th><th>Período</th><th>Total</th><th>Status</th></tr>
+              </thead>
+              <tbody id="tbody-reservas"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-veiculos" class="hidden">
+        <div class="card">
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>Veículo</th><th>Placa</th><th>Categoria</th><th>Loja</th><th>Total Locações</th><th>Km Rodado</th><th>Receita Gerada</th><th>Status</th></tr>
+              </thead>
+              <tbody id="tbody-veiculos"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../../js/utils.js"></script>
+<script>
+const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  Auth.requireAdmin();
+  renderAdminSidebar('relatorios');
+
+  const hoje = new Date();
+  document.getElementById('res-de').value  = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-01`;
+  document.getElementById('res-ate').value = hoje.toISOString().split('T')[0];
+
+  await loadFinanceiro();
+});
+
+function switchTab(tab, btn) {
+  ['financeiro','reservas','veiculos'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.add('hidden');
+  });
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.remove('hidden');
+  btn.classList.add('active');
+
+  if (tab === 'reservas' && !document.getElementById('tbody-reservas').innerHTML.trim()) loadReservas();
+  if (tab === 'veiculos' && !document.getElementById('tbody-veiculos').innerHTML.trim()) loadVeiculos();
+}
+
+async function loadFinanceiro() {
+  const ano = document.getElementById('periodo-ano').value;
+  try {
+    const res = await API.relatorios.financeiro({ ano });
+    const d   = res.data;
+
+    const totalAno = d.mensal?.reduce((s, m) => s + Number(m.total||0), 0) || 0;
+    const melhorMes = d.mensal?.reduce((best, m) => Number(m.total||0) > Number(best.total||0) ? m : best, d.mensal?.[0] || {});
+    const mediaM    = d.mensal?.length ? totalAno / d.mensal.length : 0;
+
+    document.getElementById('stats-financeiro').innerHTML = `
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value">${fmtMoeda(totalAno)}</div><div class="stat-label">Receita Total Ano</div></div>
+      <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-value">${melhorMes.mes ? MESES[melhorMes.mes - 1] : '—'}</div><div class="stat-label">Melhor Mês</div></div>
+      <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-value">${fmtMoeda(mediaM)}</div><div class="stat-label">Média Mensal</div></div>
+      <div class="stat-card"><div class="stat-icon">🏪</div><div class="stat-value">${d.por_loja?.length || '—'}</div><div class="stat-label">Lojas com Receita</div></div>
+    `;
+
+    renderChartMensal(d.mensal || [], totalAno);
+
+    renderPorCategoria(d.por_categoria || []);
+
+    renderPorLoja(d.por_loja || []);
+
+  } catch (e) {
+    Toast.error('Erro ao carregar relatório financeiro');
+  }
+}
+
+function renderChartMensal(dados, total) {
+  const chart  = document.getElementById('chart-mensal');
+  const labels = document.getElementById('chart-labels');
+  if (!dados.length) { chart.innerHTML = '<p style="color:var(--fc-text-muted)">Sem dados</p>'; return; }
+
+  const max = Math.max(...dados.map(d => Number(d.total||0)), 1);
+  chart.innerHTML = dados.map(d => `
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <span style="font-size:.65rem;color:var(--fc-text-muted)">${fmtMoeda(d.total).replace('R$','')}</span>
+      <div style="width:100%;background:var(--fc-amber);opacity:${0.4 + 0.6 * Number(d.total||0)/max};
+                  border-radius:4px 4px 0 0;height:${Math.round(Number(d.total||0)/max*170)}px;min-height:4px"></div>
+    </div>
+  `).join('');
+  labels.innerHTML = dados.map(d => `
+    <div style="flex:1;text-align:center;font-size:.65rem;color:var(--fc-text-muted)">${d.mes ? MESES[d.mes-1] : ''}</div>
+  `).join('');
+}
+
+function renderPorCategoria(dados) {
+  const el = document.getElementById('por-categoria');
+  if (!dados.length) { el.innerHTML = '<p style="color:var(--fc-text-muted)">Sem dados</p>'; return; }
+  const max = Math.max(...dados.map(d => Number(d.total||0)), 1);
+  el.innerHTML = dados.map(d => `
+    <div style="margin-bottom:var(--sp-md)">
+      <div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:4px">
+        <span class="badge badge-${d.categoria}">${d.categoria}</span>
+        <strong>${fmtMoeda(d.total)}</strong>
+      </div>
+      <div style="height:6px;background:var(--fc-border);border-radius:999px;overflow:hidden">
+        <div style="width:${Math.round(Number(d.total||0)/max*100)}%;height:100%;background:var(--fc-amber);border-radius:999px"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderPorLoja(dados) {
+  const tbody = document.getElementById('tbody-lojas');
+  if (!dados.length) { tableEmpty(tbody, 'Nenhuma receita registrada', 4); return; }
+  tbody.innerHTML = dados.map(d => `
+    <tr>
+      <td><strong>${d.loja_nome||'—'}</strong></td>
+      <td>${d.loja_cidade||'—'}</td>
+      <td>${d.total_reservas||0}</td>
+      <td><strong class="text-amber">${fmtMoeda(d.total)}</strong></td>
+    </tr>
+  `).join('');
+}
+
+async function loadReservas() {
+  const de  = document.getElementById('res-de').value;
+  const ate = document.getElementById('res-ate').value;
+  tableLoading(document.getElementById('tbody-reservas'), 6);
+  try {
+    const res = await API.relatorios.reservas({ data_inicio: de, data_fim: ate });
+    const lista = res.data || [];
+    if (!lista.length) { tableEmpty(document.getElementById('tbody-reservas'), 'Nenhuma reserva no período', 6); return; }
+    document.getElementById('tbody-reservas').innerHTML = lista.map(r => `
+      <tr>
+        <td>#${r.id}</td>
+        <td>${r.cliente_nome||'—'}</td>
+        <td>${r.veiculo_modelo||'—'}</td>
+        <td style="font-size:.82rem">${fmtData(r.data_retirada)} → ${fmtData(r.data_devolucao)}</td>
+        <td>${fmtMoeda(r.valor_total)}</td>
+        <td><span class="badge badge-${r.status}">${r.status}</span></td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    Toast.error('Erro ao carregar reservas');
+  }
+}
+
+async function loadVeiculos() {
+  tableLoading(document.getElementById('tbody-veiculos'), 8);
+  try {
+    const res = await API.relatorios.veiculos();
+    const lista = res.data || [];
+    if (!lista.length) { tableEmpty(document.getElementById('tbody-veiculos'), 'Nenhum dado disponível', 8); return; }
+    document.getElementById('tbody-veiculos').innerHTML = lista.map(v => `
+      <tr>
+        <td><strong>${v.modelo}</strong> ${v.marca}</td>
+        <td><code>${v.placa}</code></td>
+        <td><span class="badge badge-${v.categoria}">${v.categoria}</span></td>
+        <td style="font-size:.85rem">${v.loja_nome||'—'}</td>
+        <td>${v.total_locacoes||0}</td>
+        <td>${Number(v.km_total||0).toLocaleString('pt-BR')} km</td>
+        <td>${fmtMoeda(v.receita_total)}</td>
+        <td><span class="badge badge-${v.status}">${v.status}</span></td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    Toast.error('Erro ao carregar dados de frota');
+  }
+}
+
+function toggleMobileMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+</script>
+</body>
+</html>

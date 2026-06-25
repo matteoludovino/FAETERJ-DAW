@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Reserva — Falls Car</title>
+  <link rel="stylesheet" href="../../css/main.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-mobile-menu" onclick="toggleMobileMenu()">☰</button>
+        <div>
+          <div class="page-title">Nova Reserva</div>
+          <div class="page-subtitle">Preencha os dados da locação</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div style="max-width:720px;margin:0 auto">
+
+        <div class="alert alert-info" style="margin-bottom:var(--sp-xl)">
+          ℹ️ Locações disponíveis por <strong>7, 15 ou 30 dias</strong>. Pagamento antecipado por cartão de crédito.
+          Cancelamento com <strong>reembolso de 80%</strong> até 24h antes da retirada.
+        </div>
+
+        <div id="alert-erro" class="alert alert-danger hidden" style="margin-bottom:var(--sp-lg)"></div>
+
+        <form id="form-reserva" novalidate>
+
+          <div class="card" style="margin-bottom:var(--sp-lg)">
+            <div class="card-header"><div class="card-title">1. Local e Período</div></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Loja de Retirada/Devolução <span class="required">*</span></label>
+                <select name="loja_id" id="sel-loja" class="form-control" required onchange="onLojaChange()">
+                  <option value="">Selecione a loja…</option>
+                </select>
+                <span class="form-hint">A devolução deve ocorrer na mesma cidade da retirada (RN05).</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Data de Retirada <span class="required">*</span></label>
+                <input type="date" name="data_retirada" id="inp-data" class="form-control"
+                       style="max-width:220px" required onchange="calcDevolucao()">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Período <span class="required">*</span></label>
+                <div class="period-selector" id="periodo-selector">
+                  <input type="radio" name="periodo_dias" id="p7"  value="7"  class="period-option" onchange="calcDevolucao()">
+                  <label for="p7">7 dias</label>
+                  <input type="radio" name="periodo_dias" id="p15" value="15" class="period-option" onchange="calcDevolucao()">
+                  <label for="p15">15 dias</label>
+                  <input type="radio" name="periodo_dias" id="p30" value="30" class="period-option" onchange="calcDevolucao()">
+                  <label for="p30">30 dias</label>
+                </div>
+                <span class="form-hint" id="data-devolucao-hint">Selecione a data de retirada e o período.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:var(--sp-lg)">
+            <div class="card-header"><div class="card-title">2. Categoria do Veículo</div></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Categoria <span class="required">*</span></label>
+                <select name="categoria" id="sel-categoria" class="form-control" required onchange="calcValor()">
+                  <option value="">Selecione uma categoria…</option>
+                  <option value="economico">🏎️ Econômico</option>
+                  <option value="compacto">🚘 Compacto</option>
+                  <option value="sedan">🚗 Sedan</option>
+                  <option value="suv">🚙 SUV</option>
+                  <option value="luxo">✨ Luxo</option>
+                  <option value="pickup">🛻 Pickup</option>
+                </select>
+                <span class="form-hint">
+                  Um veículo disponível da categoria escolhida será alocado automaticamente na loja selecionada.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:var(--sp-lg)">
+            <div class="card-header">
+              <div>
+                <div class="card-title">3. Motorista Adicional</div>
+                <div class="card-subtitle">Opcional — RN06</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Motorista (opcional)</label>
+                <select name="motorista_id" id="sel-motorista" class="form-control" onchange="calcValor()">
+                  <option value="">Sem motorista adicional</option>
+                </select>
+                <span class="form-hint">Custo adicional: 20% da diária do veículo por dia.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:var(--sp-lg)">
+            <div class="card-header"><div class="card-title">4. Pagamento</div></div>
+            <div class="card-body">
+              <div class="alert alert-warning" style="margin-bottom:var(--sp-lg)">
+                💳 O pagamento é <strong>antecipado e obrigatório</strong> (RN03). Para fins acadêmicos, o pagamento será simulado automaticamente como aprovado.
+              </div>
+              <div class="form-row cols-2">
+                <div class="form-group">
+                  <label class="form-label">Número do Cartão <span class="required">*</span></label>
+                  <input type="text" name="cartao_numero" class="form-control"
+                         placeholder="4111 1111 1111 1111" maxlength="19" required
+                         oninput="maskCartao(this)">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Nome no Cartão <span class="required">*</span></label>
+                  <input type="text" name="cartao_nome" class="form-control"
+                         placeholder="NOME SOBRENOME" required style="text-transform:uppercase">
+                </div>
+              </div>
+              <div class="form-row cols-2">
+                <div class="form-group">
+                  <label class="form-label">Validade <span class="required">*</span></label>
+                  <input type="text" name="cartao_validade" class="form-control"
+                         placeholder="MM/AA" maxlength="5" required oninput="maskValidade(this)">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">CVV <span class="required">*</span></label>
+                  <input type="text" name="cartao_cvv" class="form-control"
+                         placeholder="123" maxlength="4" required>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" id="card-resumo" style="margin-bottom:var(--sp-lg);border:2px solid var(--fc-amber)">
+            <div class="card-header">
+              <div class="card-title">Resumo do Pedido</div>
+            </div>
+            <div class="card-body">
+              <div id="resumo-content" style="color:var(--fc-text-muted)">
+                Preencha os campos acima para ver o resumo.
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full btn-lg" id="btn-confirmar" disabled>
+            🔒 Confirmar e Pagar
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../../js/utils.js"></script>
+<script>
+const precos = {};
+let allLojas = [];
+let allMotoristas = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  Auth.requireCliente();
+  renderClienteSidebar('reservar');
+
+  const amanha = new Date();
+  amanha.setDate(amanha.getDate() + 1);
+  document.getElementById('inp-data').min = amanha.toISOString().split('T')[0];
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('loja')) {
+    const sel = document.getElementById('sel-loja');
+    sel.dataset.preselect = params.get('loja');
+  }
+  if (params.get('categoria')) {
+    document.getElementById('sel-categoria').value = params.get('categoria');
+  }
+
+  await Promise.all([loadLojas(), loadMotoristas()]);
+
+  document.getElementById('form-reserva').addEventListener('submit', confirmarReserva);
+});
+
+async function loadLojas() {
+  try {
+    const res = await API.lojas.list();
+    allLojas = res.data || [];
+    const sel = document.getElementById('sel-loja');
+    allLojas.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = `${l.nome} — ${l.cidade}/${l.estado}`;
+      sel.appendChild(opt);
+    });
+    if (sel.dataset.preselect) sel.value = sel.dataset.preselect;
+  } catch (e) {}
+}
+
+async function loadMotoristas() {
+  try {
+    const res = await API.motoristas.list();
+    allMotoristas = res.data || [];
+    const sel = document.getElementById('sel-motorista');
+    allMotoristas.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = `${m.nome} — CNH ${m.cnh}`;
+      sel.appendChild(opt);
+    });
+  } catch (e) {}
+}
+
+function onLojaChange() { calcValor(); }
+
+function calcDevolucao() {
+  const data   = document.getElementById('inp-data').value;
+  const periodo = document.querySelector('input[name="periodo_dias"]:checked')?.value;
+  const hint    = document.getElementById('data-devolucao-hint');
+
+  if (data && periodo) {
+    const dtDev = addDias(data, Number(periodo));
+    hint.textContent = `Devolução prevista: ${fmtData(dtDev)}`;
+    hint.style.color = 'var(--fc-success)';
+  } else {
+    hint.textContent = 'Selecione a data de retirada e o período.';
+    hint.style.color = '';
+  }
+  calcValor();
+}
+
+const PRECOS_BASE = {
+  economico: { 7: 120, 15: 110, 30: 100 },
+  compacto:  { 7: 140, 15: 130, 30: 120 },
+  sedan:     { 7: 180, 15: 165, 30: 150 },
+  suv:       { 7: 250, 15: 230, 30: 210 },
+  luxo:      { 7: 400, 15: 370, 30: 340 },
+  pickup:    { 7: 220, 15: 200, 30: 180 },
+};
+
+function calcValor() {
+  const lojaId   = document.getElementById('sel-loja').value;
+  const data     = document.getElementById('inp-data').value;
+  const periodo  = Number(document.querySelector('input[name="periodo_dias"]:checked')?.value || 0);
+  const categoria= document.getElementById('sel-categoria').value;
+  const motorista= document.getElementById('sel-motorista').value;
+
+  const btn    = document.getElementById('btn-confirmar');
+  const resumo = document.getElementById('resumo-content');
+
+  const ok = lojaId && data && periodo && categoria;
+
+  if (!ok) {
+    resumo.innerHTML = '<span style="color:var(--fc-text-muted)">Preencha todos os campos para ver o resumo.</span>';
+    btn.disabled = true;
+    return;
+  }
+
+  const diaria   = PRECOS_BASE[categoria]?.[periodo] || 0;
+  const veiculo  = diaria * periodo;
+  const mPct     = motorista ? 0.20 : 0;
+  const mValor   = motorista ? diaria * mPct * periodo : 0;
+  const total    = veiculo + mValor;
+  const dtDev    = addDias(data, periodo);
+  const lojaObj  = allLojas.find(l => String(l.id) === lojaId);
+  const motObj   = allMotoristas.find(m => String(m.id) === motorista);
+
+  resumo.innerHTML = `
+    <div style="display:grid;gap:var(--sp-sm)">
+      <div style="display:flex;justify-content:space-between">
+        <span>📍 Loja</span>
+        <strong>${lojaObj?.nome || lojaId}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span>📅 Período</span>
+        <strong>${fmtData(data)} → ${fmtData(dtDev)} (${periodo} dias)</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span>🚗 Categoria</span>
+        <strong>${capitalize(categoria)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span>Diária</span>
+        <span>${fmtMoeda(diaria)}/dia × ${periodo} dias</span>
+      </div>
+      ${motorista ? `
+      <div style="display:flex;justify-content:space-between">
+        <span>🧑‍✈️ Motorista adicional</span>
+        <span>${motObj?.nome || ''} (+20%)</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span>Custo motorista</span>
+        <span>${fmtMoeda(mValor)}</span>
+      </div>
+      ` : ''}
+      <hr style="border:none;border-top:1px solid var(--fc-border);margin:4px 0">
+      <div style="display:flex;justify-content:space-between;font-size:1.1rem">
+        <strong>Total</strong>
+        <strong class="text-amber">${fmtMoeda(total)}</strong>
+      </div>
+    </div>
+  `;
+  btn.disabled = false;
+}
+
+async function confirmarReserva(e) {
+  e.preventDefault();
+  const alertErro = document.getElementById('alert-erro');
+  alertErro.classList.add('hidden');
+
+  const btn     = document.getElementById('btn-confirmar');
+  const data    = formData(document.getElementById('form-reserva'));
+  const periodo = Number(document.querySelector('input[name="periodo_dias"]:checked')?.value || 0);
+
+  if (!periodo) {
+    alertErro.textContent = 'Selecione um período (7, 15 ou 30 dias).';
+    alertErro.classList.remove('hidden');
+    return;
+  }
+
+  const dtRet = data.data_retirada;
+  const dtDev = addDias(dtRet, periodo);
+
+  const payload = {
+    loja_id:        Number(data.loja_id),
+    data_retirada:  dtRet,
+    data_devolucao: dtDev,
+    periodo_dias:   periodo,
+    categoria:      data.categoria,
+    motorista_id:   data.motorista_id || null,
+    pagamento: {
+      metodo:   'cartao_credito',
+      cartao_numero:   data.cartao_numero?.replace(/\s/g,''),
+      cartao_nome:     data.cartao_nome,
+      cartao_validade: data.cartao_validade,
+      cartao_cvv:      data.cartao_cvv,
+    }
+  };
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Processando…';
+
+  try {
+    const res = await API.reservas.create(payload);
+    Toast.success('Reserva confirmada! Redirecionando…');
+    setTimeout(() => {
+      window.location.href = `minhas-reservas.html`;
+    }, 1500);
+  } catch (err) {
+    alertErro.textContent = err.message || 'Erro ao criar reserva. Tente novamente.';
+    alertErro.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = '🔒 Confirmar e Pagar';
+  }
+}
+
+function maskCartao(input) {
+  let v = input.value.replace(/\D/g,'').slice(0,16);
+  v = v.match(/.{1,4}/g)?.join(' ') || v;
+  input.value = v;
+}
+
+function maskValidade(input) {
+  let v = input.value.replace(/\D/g,'').slice(0,4);
+  if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
+  input.value = v;
+}
+
+function toggleMobileMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reservas — Falls Car Admin</title>
+  <link rel="stylesheet" href="../../css/main.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-mobile-menu" onclick="toggleMobileMenu()">☰</button>
+        <div>
+          <div class="page-title">Reservas</div>
+          <div class="page-subtitle">Controle de locações</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="filters-bar">
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search" placeholder="Buscar cliente, veículo…" oninput="applyFilters()">
+        </div>
+        <select class="form-control" id="filter-status" onchange="applyFilters()" style="width:auto;min-width:140px">
+          <option value="">Todos os status</option>
+          <option value="confirmada">Confirmada</option>
+          <option value="ativa">Ativa</option>
+          <option value="concluida">Concluída</option>
+          <option value="cancelada">Cancelada</option>
+          <option value="pendente">Pendente</option>
+        </select>
+        <input type="date" class="form-control" id="filter-data" onchange="applyFilters()" style="width:auto">
+      </div>
+
+      <div class="card">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Cliente</th>
+                <th>Veículo</th>
+                <th>Loja</th>
+                <th>Retirada</th>
+                <th>Devolução</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-reserva">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-reserva-title">Reserva #—</h3>
+      <button class="modal-close" onclick="Modal.close('modal-reserva')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-reserva-body">
+    </div>
+    <div class="modal-footer" id="modal-reserva-footer">
+      <button class="btn btn-outline" onclick="Modal.close('modal-reserva')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../../js/utils.js"></script>
+<script>
+let allReservas = [];
+let reservaAtual = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  Auth.requireAdmin();
+  renderAdminSidebar('reservas');
+  await loadReservas();
+});
+
+async function loadReservas() {
+  tableLoading(document.getElementById('tbody'), 9);
+  try {
+    const res = await API.reservas.list();
+    allReservas = res.data || [];
+    applyFilters();
+  } catch (e) {
+    tableEmpty(document.getElementById('tbody'), 'Erro ao carregar reservas', 9);
+  }
+}
+
+function applyFilters() {
+  const q   = document.getElementById('search').value.toLowerCase();
+  const st  = document.getElementById('filter-status').value;
+  const dt  = document.getElementById('filter-data').value;
+
+  const filtered = allReservas.filter(r => {
+    const matchQ  = !q  || `${r.cliente_nome||''} ${r.veiculo_modelo||''}`.toLowerCase().includes(q);
+    const matchSt = !st  || r.status === st;
+    const matchDt = !dt  || r.data_retirada?.startsWith(dt);
+    return matchQ && matchSt && matchDt;
+  });
+  renderTabela(filtered);
+}
+
+function renderTabela(lista) {
+  const tbody = document.getElementById('tbody');
+  if (!lista.length) { tableEmpty(tbody, 'Nenhuma reserva encontrada', 9); return; }
+  tbody.innerHTML = lista.map(r => {
+    const acoes = buildAcoes(r);
+    return `
+    <tr>
+      <td><strong>#${r.id}</strong></td>
+      <td>${r.cliente_nome || '—'}</td>
+      <td style="font-size:.85rem">${r.veiculo_modelo || '—'}<br><code style="font-size:.75rem">${r.veiculo_placa || ''}</code></td>
+      <td style="font-size:.82rem">${r.loja_nome || '—'}</td>
+      <td style="font-size:.82rem">${fmtData(r.data_retirada)}</td>
+      <td style="font-size:.82rem">${fmtData(r.data_devolucao)}</td>
+      <td><strong>${fmtMoeda(r.valor_total)}</strong></td>
+      <td><span class="badge badge-${r.status}">${r.status}</span></td>
+      <td>
+        <div class="td-actions">
+          <button class="btn btn-ghost btn-sm" onclick="verDetalhes(${r.id})">📄 Ver</button>
+          ${acoes}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function buildAcoes(r) {
+  const btns = [];
+  if (r.status === 'confirmada') {
+    btns.push(`<button class="btn btn-success btn-sm" onclick="retirar(${r.id})">✅ Retirar</button>`);
+    btns.push(`<button class="btn btn-danger btn-sm"  onclick="cancelar(${r.id})">✕ Cancelar</button>`);
+  }
+  if (r.status === 'ativa') {
+    btns.push(`<button class="btn btn-secondary btn-sm" onclick="devolver(${r.id})">🔄 Devolver</button>`);
+  }
+  return btns.join('');
+}
+
+async function verDetalhes(id) {
+  const r = allReservas.find(x => x.id === id);
+  if (!r) return;
+  reservaAtual = r;
+
+  document.getElementById('modal-reserva-title').textContent = `Reserva #${r.id}`;
+  document.getElementById('modal-reserva-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-lg)">
+      <div>
+        <p style="font-size:.75rem;font-weight:600;text-transform:uppercase;color:var(--fc-text-muted);margin-bottom:4px">Cliente</p>
+        <p style="color:var(--fc-text);font-weight:600">${r.cliente_nome || '—'}</p>
+      </div>
+      <div>
+        <p style="font-size:.75rem;font-weight:600;text-transform:uppercase;color:var(--fc-text-muted);margin-bottom:4px">Veículo</p>
+        <p style="color:var(--fc-text);font-weight:600">${r.veiculo_modelo || '—'} <code style="font-size:.8rem">${r.veiculo_placa||''}</code></p>
+      </div>
+      <div>
+        <p style="font-size:.75rem;font-weight:600;text-transform:uppercase;color:var(--fc-text-muted);margin-bottom:4px">Loja de Retirada</p>
+        <p style="color:var(--fc-text)">${r.loja_nome || '—'}</p>
+      </div>
+      <div>
+        <p style="font-size:.75rem;font-weight:600;text-transform:uppercase;color:var(--fc-text-muted);margin-bottom:4px">Status</p>
+        <span class="badge badge-${r.status}">${r.status}</span>
+      </div>
+      <div>
+        <p style="font-size:.75rem;font-weight:600;text-transform:uppercase;color:var(--fc-text-muted);margin-bottom:4px">Data Retirada</p>
+        <p style="color:var(--fc-text)">${fmtData(r.data_retirada)}</p>
+      </div>
+      <div>
+        <p style="font-size:.75rem;font-weight:600;text-transform:uppercase;color:var(--fc-text-muted);margin-bottom:4px">Data Devolução</p>
+        <p style="color:var(--fc-text)">${fmtData(r.data_devolucao)}</p>
+      </div>
+      <div>
+        <p style="font-size:.75rem;font-weight:600;text-transform:uppercase;color:var(--fc-text-muted);margin-bottom:4px">Período</p>
+        <p style="color:var(--fc-text)">${r.periodo_dias} dias</p>
+      </div>
+      <div>
+        <p style="font-size:.75rem;font-weight:600;text-transform:uppercase;color:var(--fc-text-muted);margin-bottom:4px">Motorista Adicional</p>
+        <p style="color:var(--fc-text)">${r.motorista_nome || 'Não'}</p>
+      </div>
+    </div>
+    <hr style="margin:var(--sp-lg) 0;border:none;border-top:1px solid var(--fc-border)">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-md)">
+      <div>
+        <p style="font-size:.75rem;color:var(--fc-text-muted)">Valor Veículo</p>
+        <p style="font-weight:700;color:var(--fc-text)">${fmtMoeda(r.valor_veiculo)}</p>
+      </div>
+      <div>
+        <p style="font-size:.75rem;color:var(--fc-text-muted)">Motorista Extra</p>
+        <p style="font-weight:700;color:var(--fc-text)">${fmtMoeda(r.valor_motorista)}</p>
+      </div>
+      <div>
+        <p style="font-size:.75rem;color:var(--fc-text-muted)">Total Pago</p>
+        <p style="font-weight:800;font-size:1.1rem;color:var(--fc-amber)">${fmtMoeda(r.valor_total)}</p>
+      </div>
+    </div>
+  `;
+
+  const footer = document.getElementById('modal-reserva-footer');
+  const acoes = buildAcoes(r);
+  footer.innerHTML = `
+    <button class="btn btn-outline" onclick="Modal.close('modal-reserva')">Fechar</button>
+    ${acoes}
+  `;
+  Modal.open('modal-reserva');
+}
+
+async function retirar(id) {
+  const ok = await confirmar('Confirmar retirada do veículo pelo cliente?');
+  if (!ok) return;
+  try {
+    await API.reservas.retirar(id, {});
+    Toast.success('Veículo retirado! Locação iniciada.');
+    Modal.close('modal-reserva');
+    await loadReservas();
+  } catch (e) {
+    Toast.error(e.message || 'Erro ao registrar retirada');
+  }
+}
+
+async function devolver(id) {
+  const ok = await confirmar('Confirmar devolução do veículo?');
+  if (!ok) return;
+  try {
+    await API.reservas.devolver(id, {});
+    Toast.success('Veículo devolvido! Locação concluída.');
+    Modal.close('modal-reserva');
+    await loadReservas();
+  } catch (e) {
+    Toast.error(e.message || 'Erro ao registrar devolução');
+  }
+}
+
+async function cancelar(id) {
+  const ok = await confirmar('Cancelar esta reserva? O cliente receberá reembolso de 80%.');
+  if (!ok) return;
+  try {
+    await API.reservas.cancelar(id, {});
+    Toast.success('Reserva cancelada.');
+    Modal.close('modal-reserva');
+    await loadReservas();
+  } catch (e) {
+    Toast.error(e.message || 'Erro ao cancelar');
+  }
+}
+
+function toggleMobileMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+</script>
+</body>
+</html>

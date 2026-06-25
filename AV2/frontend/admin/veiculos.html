@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veículos — Falls Car Admin</title>
+  <link rel="stylesheet" href="../../css/main.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-mobile-menu" onclick="toggleMobileMenu()">☰</button>
+        <div>
+          <div class="page-title">Veículos</div>
+          <div class="page-subtitle">Gestão da frota</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary btn-sm" onclick="openModalNovo()">+ Novo Veículo</button>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="filters-bar">
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search" placeholder="Buscar modelo, marca, placa…" oninput="applyFilters()">
+        </div>
+        <select class="form-control" id="filter-status" onchange="applyFilters()" style="width:auto;min-width:140px">
+          <option value="">Todos os status</option>
+          <option value="livre">Livre</option>
+          <option value="alugado">Alugado</option>
+          <option value="reservado">Reservado</option>
+          <option value="manutencao">Manutenção</option>
+        </select>
+        <select class="form-control" id="filter-categoria" onchange="applyFilters()" style="width:auto;min-width:140px">
+          <option value="">Todas as categorias</option>
+          <option value="economico">Econômico</option>
+          <option value="compacto">Compacto</option>
+          <option value="sedan">Sedan</option>
+          <option value="suv">SUV</option>
+          <option value="luxo">Luxo</option>
+          <option value="pickup">Pickup</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Veículo</th>
+                <th>Placa</th>
+                <th>Categoria</th>
+                <th>Loja</th>
+                <th>Km</th>
+                <th>Diária</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-veiculo">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-title">Novo Veículo</h3>
+      <button class="modal-close" onclick="Modal.close('modal-veiculo')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-veiculo" novalidate>
+        <input type="hidden" id="v-id">
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label class="form-label">Modelo <span class="required">*</span></label>
+            <input type="text" name="modelo" class="form-control" placeholder="Civic" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Marca <span class="required">*</span></label>
+            <input type="text" name="marca" class="form-control" placeholder="Honda" required>
+          </div>
+        </div>
+        <div class="form-row cols-3">
+          <div class="form-group">
+            <label class="form-label">Ano <span class="required">*</span></label>
+            <input type="number" name="ano" class="form-control" placeholder="2023" min="2000" max="2030" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Placa <span class="required">*</span></label>
+            <input type="text" name="placa" class="form-control" placeholder="ABC-1234" maxlength="8" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cor</label>
+            <input type="text" name="cor" class="form-control" placeholder="Prata">
+          </div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label class="form-label">Categoria <span class="required">*</span></label>
+            <select name="categoria" class="form-control" required>
+              <option value="">Selecione…</option>
+              <option value="economico">Econômico</option>
+              <option value="compacto">Compacto</option>
+              <option value="sedan">Sedan</option>
+              <option value="suv">SUV</option>
+              <option value="luxo">Luxo</option>
+              <option value="pickup">Pickup</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Combustível</label>
+            <select name="combustivel" class="form-control">
+              <option value="flex">Flex</option>
+              <option value="gasolina">Gasolina</option>
+              <option value="diesel">Diesel</option>
+              <option value="eletrico">Elétrico</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row cols-3">
+          <div class="form-group">
+            <label class="form-label">Km atual</label>
+            <input type="number" name="quilometragem" class="form-control" placeholder="0" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Passageiros</label>
+            <input type="number" name="capacidade_passageiros" class="form-control" placeholder="5" min="1" max="9">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Portas</label>
+            <input type="number" name="portas" class="form-control" placeholder="4" min="2" max="5">
+          </div>
+        </div>
+        <div class="form-row cols-3">
+          <div class="form-group">
+            <label class="form-label">Diária 7d (R$) <span class="required">*</span></label>
+            <input type="number" name="valor_diaria_7" class="form-control" placeholder="150.00" step="0.01" min="0" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Diária 15d (R$) <span class="required">*</span></label>
+            <input type="number" name="valor_diaria_15" class="form-control" placeholder="140.00" step="0.01" min="0" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Diária 30d (R$) <span class="required">*</span></label>
+            <input type="number" name="valor_diaria_30" class="form-control" placeholder="130.00" step="0.01" min="0" required>
+          </div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label class="form-label">Loja <span class="required">*</span></label>
+            <select name="loja_id" class="form-control" id="select-loja" required>
+              <option value="">Selecione…</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-control">
+              <option value="livre">Livre</option>
+              <option value="manutencao">Manutenção</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">URL da Imagem</label>
+          <input type="url" name="imagem_url" class="form-control" placeholder="https://…">
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('modal-veiculo')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar" onclick="salvar()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../../js/utils.js"></script>
+<script>
+let allVeiculos = [];
+let lojas = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  Auth.requireAdmin();
+  renderAdminSidebar('veiculos');
+  await Promise.all([loadVeiculos(), loadLojas()]);
+});
+
+async function loadVeiculos() {
+  tableLoading(document.getElementById('tbody'), 9);
+  try {
+    const res = await API.veiculos.list();
+    allVeiculos = res.data || [];
+    applyFilters();
+  } catch (e) {
+    tableEmpty(document.getElementById('tbody'), 'Erro ao carregar veículos', 9);
+  }
+}
+
+async function loadLojas() {
+  try {
+    const res = await API.lojas.list();
+    lojas = res.data || [];
+    const sel = document.getElementById('select-loja');
+    lojas.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = l.nome;
+      sel.appendChild(opt);
+    });
+  } catch (e) {}
+}
+
+function applyFilters() {
+  const q   = document.getElementById('search').value.toLowerCase();
+  const st  = document.getElementById('filter-status').value;
+  const cat = document.getElementById('filter-categoria').value;
+
+  const filtered = allVeiculos.filter(v => {
+    const matchQ   = !q  || `${v.modelo} ${v.marca} ${v.placa}`.toLowerCase().includes(q);
+    const matchSt  = !st  || v.status === st;
+    const matchCat = !cat || v.categoria === cat;
+    return matchQ && matchSt && matchCat;
+  });
+  renderTabela(filtered);
+}
+
+function renderTabela(lista) {
+  const tbody = document.getElementById('tbody');
+  if (!lista.length) { tableEmpty(tbody, 'Nenhum veículo encontrado', 9); return; }
+  tbody.innerHTML = lista.map(v => `
+    <tr>
+      <td>${v.id}</td>
+      <td>
+        <strong>${v.modelo}</strong>
+        <div style="font-size:.78rem;color:var(--fc-text-muted)">${v.marca} ${v.ano}</div>
+      </td>
+      <td><code>${v.placa}</code></td>
+      <td><span class="badge badge-${v.categoria}">${v.categoria}</span></td>
+      <td style="font-size:.85rem">${v.loja_nome || '—'}</td>
+      <td>${Number(v.quilometragem||0).toLocaleString('pt-BR')} km</td>
+      <td>${fmtMoeda(v.valor_diaria_7)}<span style="font-size:.7rem;color:var(--fc-text-muted)">/7d</span></td>
+      <td>
+        <select class="form-control" style="padding:4px 8px;font-size:.8rem;width:auto"
+                onchange="updateStatus(${v.id}, this.value)">
+          ${['livre','alugado','reservado','manutencao'].map(s =>
+            `<option value="${s}"${v.status===s?' selected':''}>${s}</option>`
+          ).join('')}
+        </select>
+      </td>
+      <td>
+        <div class="td-actions">
+          <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick='openModalEditar(${JSON.stringify(v)})'>✏️</button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Excluir" onclick="excluir(${v.id})">🗑️</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openModalNovo() {
+  document.getElementById('modal-title').textContent = 'Novo Veículo';
+  document.getElementById('v-id').value = '';
+  document.getElementById('form-veiculo').reset();
+  Modal.open('modal-veiculo');
+}
+
+function openModalEditar(v) {
+  document.getElementById('modal-title').textContent = 'Editar Veículo';
+  document.getElementById('v-id').value = v.id;
+  const form = document.getElementById('form-veiculo');
+  const fields = ['modelo','marca','ano','placa','cor','categoria','combustivel',
+                  'quilometragem','capacidade_passageiros','portas',
+                  'valor_diaria_7','valor_diaria_15','valor_diaria_30',
+                  'loja_id','status','imagem_url'];
+  fields.forEach(f => { if (form[f]) form[f].value = v[f] ?? ''; });
+  Modal.open('modal-veiculo');
+}
+
+async function salvar() {
+  const id   = document.getElementById('v-id').value;
+  const form = document.getElementById('form-veiculo');
+  const btn  = document.getElementById('btn-salvar');
+  const data = formData(form);
+
+  btn.disabled = true;
+  btn.textContent = 'Salvando…';
+  try {
+    if (id) {
+      await API.veiculos.update(id, data);
+      Toast.success('Veículo atualizado!');
+    } else {
+      await API.veiculos.create(data);
+      Toast.success('Veículo cadastrado!');
+    }
+    Modal.close('modal-veiculo');
+    await loadVeiculos();
+  } catch (e) {
+    Toast.error(e.message || 'Erro ao salvar');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Salvar';
+  }
+}
+
+async function updateStatus(id, status) {
+  try {
+    await API.veiculos.updateStatus(id, status);
+    Toast.success('Status atualizado!');
+    const v = allVeiculos.find(x => x.id === id);
+    if (v) v.status = status;
+  } catch (e) {
+    Toast.error(e.message || 'Erro ao atualizar status');
+    await loadVeiculos();
+  }
+}
+
+async function excluir(id) {
+  const ok = await confirmar('Excluir este veículo? Esta ação não pode ser desfeita.');
+  if (!ok) return;
+  try {
+    await API.veiculos.delete(id);
+    Toast.success('Veículo excluído!');
+    await loadVeiculos();
+  } catch (e) {
+    Toast.error(e.message || 'Erro ao excluir');
+  }
+}
+
+function toggleMobileMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+</script>
+</body>
+</html>

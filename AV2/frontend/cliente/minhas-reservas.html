@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minhas Reservas — Falls Car</title>
+  <link rel="stylesheet" href="../../css/main.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-mobile-menu" onclick="toggleMobileMenu()">☰</button>
+        <div>
+          <div class="page-title">Minhas Reservas</div>
+          <div class="page-subtitle">Histórico completo de locações</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <a href="reservar.html" class="btn btn-primary btn-sm">+ Nova Reserva</a>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="filterStatus('', this)">Todas</button>
+        <button class="tab-btn" onclick="filterStatus('confirmada', this)">Confirmadas</button>
+        <button class="tab-btn" onclick="filterStatus('ativa', this)">Ativas</button>
+        <button class="tab-btn" onclick="filterStatus('concluida', this)">Concluídas</button>
+        <button class="tab-btn" onclick="filterStatus('cancelada', this)">Canceladas</button>
+      </div>
+
+      <div id="loading" class="loading"><div class="spinner"></div></div>
+
+      <div id="lista-reservas" class="hidden"></div>
+
+      <div id="empty" class="empty-state hidden">
+        <div class="empty-state-icon">📋</div>
+        <h3>Nenhuma reserva neste status</h3>
+        <p>Que tal fazer sua primeira reserva?</p>
+        <a href="reservar.html" class="btn btn-primary" style="margin-top:var(--sp-md)">Reservar agora</a>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-detalhe">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-title">Reserva</h3>
+      <button class="modal-close" onclick="Modal.close('modal-detalhe')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('modal-detalhe')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../../js/utils.js"></script>
+<script>
+let allReservas = [];
+let filtroAtivo = '';
+
+document.addEventListener('DOMContentLoaded', async () => {
+  Auth.requireCliente();
+  renderClienteSidebar('reservas');
+  await loadReservas();
+});
+
+async function loadReservas() {
+  try {
+    const res = await API.reservas.list();
+    allReservas = res.data || [];
+  } catch (e) {
+    Toast.error('Erro ao carregar reservas');
+    allReservas = [];
+  }
+  document.getElementById('loading').classList.add('hidden');
+  renderLista();
+}
+
+function filterStatus(status, btn) {
+  filtroAtivo = status;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLista();
+}
+
+function renderLista() {
+  const lista = filtroAtivo
+    ? allReservas.filter(r => r.status === filtroAtivo)
+    : allReservas;
+
+  const container = document.getElementById('lista-reservas');
+  const empty     = document.getElementById('empty');
+
+  if (!lista.length) {
+    container.classList.add('hidden');
+    empty.classList.remove('hidden');
+    return;
+  }
+
+  empty.classList.add('hidden');
+  container.classList.remove('hidden');
+  container.innerHTML = lista.map(r => renderCard(r)).join('');
+}
+
+function renderCard(r) {
+  const podeCancelar = r.status === 'confirmada';
+  const statusIcon   = { confirmada:'✅', ativa:'🚗', concluida:'🏁', cancelada:'✕', pendente:'⏳' };
+
+  return `
+  <div class="card" style="margin-bottom:var(--sp-md)">
+    <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--sp-md)">
+      <div style="display:flex;align-items:center;gap:var(--sp-md)">
+        <div style="font-size:2rem">${statusIcon[r.status]||'📋'}</div>
+        <div>
+          <div style="display:flex;align-items:center;gap:var(--sp-sm)">
+            <strong>Reserva #${r.id}</strong>
+            <span class="badge badge-${r.status}">${r.status}</span>
+          </div>
+          <div style="color:var(--fc-text);font-weight:600;margin:2px 0">${r.veiculo_modelo||'—'} <span style="color:var(--fc-text-muted);font-weight:400;font-size:.85rem">${r.veiculo_marca||''}</span></div>
+          <div style="font-size:.82rem;color:var(--fc-text-muted)">
+            📍 ${r.loja_nome||'—'} &nbsp;|&nbsp;
+            📅 ${fmtData(r.data_retirada)} → ${fmtData(r.data_devolucao)} (${r.periodo_dias}d)
+            ${r.motorista_nome ? `&nbsp;|&nbsp; 🧑‍✈️ ${r.motorista_nome}` : ''}
+          </div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:1.2rem;font-weight:800;color:var(--fc-amber)">${fmtMoeda(r.valor_total)}</div>
+        <div style="font-size:.78rem;color:var(--fc-text-muted)">Total pago</div>
+        <div style="display:flex;gap:var(--sp-sm);margin-top:var(--sp-sm);justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="verDetalhe(${r.id})">📄 Detalhes</button>
+          ${podeCancelar ? `<button class="btn btn-danger btn-sm" onclick="cancelar(${r.id})">✕ Cancelar</button>` : ''}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function verDetalhe(id) {
+  const r = allReservas.find(x => x.id === id);
+  if (!r) return;
+
+  document.getElementById('modal-title').textContent = `Reserva #${r.id}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-lg)">
+      <div><p class="form-hint">Veículo</p><p style="font-weight:600;color:var(--fc-text)">${r.veiculo_modelo||'—'} ${r.veiculo_marca||''} ${r.veiculo_ano||''}</p></div>
+      <div><p class="form-hint">Placa</p><code>${r.veiculo_placa||'—'}</code></div>
+      <div><p class="form-hint">Loja</p><p style="color:var(--fc-text)">${r.loja_nome||'—'}</p></div>
+      <div><p class="form-hint">Status</p><span class="badge badge-${r.status}">${r.status}</span></div>
+      <div><p class="form-hint">Retirada</p><p style="color:var(--fc-text)">${fmtData(r.data_retirada)}</p></div>
+      <div><p class="form-hint">Devolução</p><p style="color:var(--fc-text)">${fmtData(r.data_devolucao)}</p></div>
+      <div><p class="form-hint">Período</p><p style="color:var(--fc-text)">${r.periodo_dias} dias</p></div>
+      <div><p class="form-hint">Motorista Adicional</p><p style="color:var(--fc-text)">${r.motorista_nome||'Não'}</p></div>
+    </div>
+    <hr style="margin:var(--sp-lg) 0;border:none;border-top:1px solid var(--fc-border)">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-md)">
+      <div><p class="form-hint">Veículo</p><strong>${fmtMoeda(r.valor_veiculo)}</strong></div>
+      <div><p class="form-hint">Motorista</p><strong>${fmtMoeda(r.valor_motorista||0)}</strong></div>
+      <div><p class="form-hint">Total</p><strong class="text-amber" style="font-size:1.1rem">${fmtMoeda(r.valor_total)}</strong></div>
+    </div>
+  `;
+
+  const footer = document.getElementById('modal-footer');
+  footer.innerHTML = `
+    <button class="btn btn-outline" onclick="Modal.close('modal-detalhe')">Fechar</button>
+    ${r.status === 'confirmada' ? `<button class="btn btn-danger" onclick="cancelar(${r.id})">✕ Cancelar Reserva</button>` : ''}
+  `;
+  Modal.open('modal-detalhe');
+}
+
+async function cancelar(id) {
+  const r = allReservas.find(x => x.id === id);
+  const ok = await confirmar(
+    `Cancelar a reserva #${id}?\n\nVocê receberá reembolso de 80% (${fmtMoeda(Number(r?.valor_total||0)*0.8)}).\nO cancelamento só é permitido até 24h antes da retirada.`
+  );
+  if (!ok) return;
+  try {
+    await API.reservas.cancelar(id, {});
+    Toast.success('Reserva cancelada. Reembolso de 80% será processado.');
+    Modal.close('modal-detalhe');
+    await loadReservas();
+  } catch (e) {
+    Toast.error(e.message || 'Erro ao cancelar reserva');
+  }
+}
+
+function toggleMobileMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+</script>
+</body>
+</html>

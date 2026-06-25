@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro — Falls Car</title>
+  <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+<div class="auth-page">
+
+  <div class="auth-visual">
+    <div class="auth-visual-icon">🚗</div>
+    <div class="auth-visual-content">
+      <h2>Crie sua conta grátis</h2>
+      <p>Reserve veículos em segundos, gerencie suas locações e aproveite planos de 7, 15 ou 30 dias.</p>
+    </div>
+  </div>
+
+  <div class="auth-panel" style="overflow-y:auto">
+    <div class="auth-logo">
+      <span style="font-size:1.5rem">🚗</span>
+      <span style="font-weight:800;font-size:1.2rem;margin-left:8px;color:var(--fc-navy)">Falls Car</span>
+    </div>
+
+    <h1 class="auth-title">Criar conta</h1>
+    <p class="auth-desc">Preencha os dados abaixo para se cadastrar.</p>
+
+    <div id="alert-box" class="alert alert-danger hidden" style="margin-bottom:var(--sp-lg)"></div>
+
+    <form id="form-cadastro" novalidate>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label class="form-label" for="nome">Nome completo <span class="required">*</span></label>
+          <input type="text" id="nome" name="nome" class="form-control"
+                 placeholder="Maria da Silva" autocomplete="name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cpf">CPF <span class="required">*</span></label>
+          <input type="text" id="cpf" name="cpf" class="form-control"
+                 placeholder="000.000.000-00" maxlength="14" required>
+        </div>
+      </div>
+
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label class="form-label" for="telefone">Telefone <span class="required">*</span></label>
+          <input type="tel" id="telefone" name="telefone" class="form-control"
+                 placeholder="(21) 99999-9999" maxlength="15" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="data_nascimento">Data de Nascimento <span class="required">*</span></label>
+          <input type="date" id="data_nascimento" name="data_nascimento" class="form-control" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="cnh">CNH (número) <span class="required">*</span></label>
+        <input type="text" id="cnh" name="cnh" class="form-control"
+               placeholder="12345678900" maxlength="20" required>
+      </div>
+
+      <div style="margin:var(--sp-md) 0 var(--sp-sm);font-size:.8rem;font-weight:600;color:var(--fc-text-muted);text-transform:uppercase;letter-spacing:.5px">
+        Endereço
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label class="form-label" for="cep">CEP <span class="required">*</span></label>
+          <input type="text" id="cep" name="cep" class="form-control"
+                 placeholder="00000-000" maxlength="9" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cidade">Cidade <span class="required">*</span></label>
+          <input type="text" id="cidade" name="cidade" class="form-control"
+                 placeholder="Rio de Janeiro" required>
+        </div>
+      </div>
+
+      <div class="form-row cols-2">
+        <div class="form-group" style="grid-column:1 / -1">
+          <label class="form-label" for="endereco">Endereço <span class="required">*</span></label>
+          <input type="text" id="endereco" name="endereco" class="form-control"
+                 placeholder="Rua das Flores, 123 — Bairro" required>
+        </div>
+      </div>
+
+      <div style="margin:var(--sp-md) 0 var(--sp-sm);font-size:.8rem;font-weight:600;color:var(--fc-text-muted);text-transform:uppercase;letter-spacing:.5px">
+        Acesso
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">E-mail <span class="required">*</span></label>
+        <input type="email" id="email" name="email" class="form-control"
+               placeholder="seu@email.com" autocomplete="email" required>
+      </div>
+
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label class="form-label" for="senha">Senha <span class="required">*</span></label>
+          <input type="password" id="senha" name="senha" class="form-control"
+                 placeholder="Mínimo 6 caracteres" autocomplete="new-password" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="senha_confirm">Confirmar senha <span class="required">*</span></label>
+          <input type="password" id="senha_confirm" name="senha_confirm" class="form-control"
+                 placeholder="••••••••" autocomplete="new-password" required>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full btn-lg" id="btn-cadastro" style="margin-top:var(--sp-sm)">
+        Criar conta
+      </button>
+    </form>
+
+    <div class="auth-switch">
+      Já tem conta? <a href="login.html">Entrar</a>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="../js/config.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if (Auth.isAuthenticated()) {
+    window.location.href = Auth.isAdmin()
+      ? `${getRootPath()}/frontend/admin/dashboard.html`
+      : `${getRootPath()}/frontend/cliente/dashboard.html`;
+    return;
+  }
+
+  document.getElementById('cpf').addEventListener('input', function() {
+    let v = this.value.replace(/\D/g, '').slice(0, 11);
+    v = v.replace(/(\d{3})(\d)/, '$1.$2')
+         .replace(/(\d{3})(\d)/, '$1.$2')
+         .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    this.value = v;
+  });
+
+  document.getElementById('telefone').addEventListener('input', function() {
+    let v = this.value.replace(/\D/g, '').slice(0, 11);
+    v = v.replace(/(\d{2})(\d)/, '($1) $2')
+         .replace(/(\d{5})(\d{4})$/, '$1-$2');
+    this.value = v;
+  });
+
+  document.getElementById('cep').addEventListener('input', function() {
+    let v = this.value.replace(/\D/g, '').slice(0, 8);
+    v = v.replace(/(\d{5})(\d)/, '$1-$2');
+    this.value = v;
+  });
+
+  const form     = document.getElementById('form-cadastro');
+  const btn      = document.getElementById('btn-cadastro');
+  const alertBox = document.getElementById('alert-box');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    alertBox.classList.add('hidden');
+
+    const data = formData(form);
+
+    if (data.senha !== data.senha_confirm) {
+      alertBox.textContent = 'As senhas não coincidem.';
+      alertBox.classList.remove('hidden');
+      return;
+    }
+    if (data.senha.length < 6) {
+      alertBox.textContent = 'A senha deve ter no mínimo 6 caracteres.';
+      alertBox.classList.remove('hidden');
+      return;
+    }
+
+    delete data.senha_confirm;
+    data.cpf = data.cpf.replace(/\D/g, '');
+
+    btn.disabled = true;
+    btn.textContent = 'Criando conta…';
+
+    try {
+      const res = await API.auth.register(data);
+      Auth.save(res.data.token, res.data.user);
+      Toast.success('Conta criada com sucesso! Bem-vindo(a)!');
+      setTimeout(() => {
+        window.location.href = `${getRootPath()}/frontend/cliente/dashboard.html`;
+      }, 1000);
+    } catch (err) {
+      alertBox.textContent = err.message || 'Erro ao criar conta. Verifique os dados.';
+      alertBox.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Criar conta';
+
+      if (err.errors) formShowErrors(form, err.errors);
+    }
+  });
+});
+</script>
+</body>
+</html>

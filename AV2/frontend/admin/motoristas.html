@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motoristas — Falls Car Admin</title>
+  <link rel="stylesheet" href="../../css/main.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-mobile-menu" onclick="toggleMobileMenu()">☰</button>
+        <div>
+          <div class="page-title">Motoristas Adicionais</div>
+          <div class="page-subtitle">Gerenciar motoristas cadastrados</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary btn-sm" onclick="openModalNovo()">+ Novo Motorista</button>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="alert alert-info" style="margin-bottom:var(--sp-lg)">
+        ℹ️ Motoristas adicionais são opcionais na reserva e geram custo extra calculado com base na diária do veículo.
+      </div>
+
+      <div class="filters-bar">
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search" placeholder="Buscar nome, CPF, CNH…" oninput="applyFilters()">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nome</th>
+                <th>CPF</th>
+                <th>CNH</th>
+                <th>Validade CNH</th>
+                <th>Telefone</th>
+                <th>E-mail</th>
+                <th>Cadastro</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-motorista">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-title">Novo Motorista</h3>
+      <button class="modal-close" onclick="Modal.close('modal-motorista')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-motorista" novalidate>
+        <input type="hidden" id="m-id">
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label class="form-label">Nome completo <span class="required">*</span></label>
+            <input type="text" name="nome" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">CPF <span class="required">*</span></label>
+            <input type="text" name="cpf" class="form-control" maxlength="14" required>
+          </div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label class="form-label">CNH <span class="required">*</span></label>
+            <input type="text" name="cnh" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Validade CNH <span class="required">*</span></label>
+            <input type="date" name="cnh_validade" class="form-control" required>
+          </div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label class="form-label">Telefone</label>
+            <input type="tel" name="telefone" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-mail</label>
+            <input type="email" name="email" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data de Nascimento</label>
+          <input type="date" name="data_nascimento" class="form-control" style="max-width:200px">
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('modal-motorista')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvar()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../../js/utils.js"></script>
+<script>
+let allMotoristas = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  Auth.requireAdmin();
+  renderAdminSidebar('motoristas');
+  await loadMotoristas();
+});
+
+async function loadMotoristas() {
+  tableLoading(document.getElementById('tbody'), 9);
+  try {
+    const res = await API.motoristas.list();
+    allMotoristas = res.data || [];
+    applyFilters();
+  } catch (e) {
+    tableEmpty(document.getElementById('tbody'), 'Erro ao carregar motoristas', 9);
+  }
+}
+
+function applyFilters() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const filtered = allMotoristas.filter(m =>
+    !q || `${m.nome} ${m.cpf} ${m.cnh}`.toLowerCase().includes(q)
+  );
+  renderTabela(filtered);
+}
+
+function renderTabela(lista) {
+  const tbody = document.getElementById('tbody');
+  if (!lista.length) { tableEmpty(tbody, 'Nenhum motorista encontrado', 9); return; }
+
+  const hoje = new Date();
+  tbody.innerHTML = lista.map(m => {
+    const validade = m.cnh_validade ? new Date(m.cnh_validade + 'T00:00:00') : null;
+    const vencido  = validade && validade < hoje;
+    return `
+    <tr>
+      <td>${m.id}</td>
+      <td><strong>${m.nome}</strong></td>
+      <td>${fmtCPF(m.cpf)}</td>
+      <td>${m.cnh || '—'}</td>
+      <td style="${vencido ? 'color:var(--fc-danger);font-weight:600' : ''}">${fmtData(m.cnh_validade)}${vencido ? ' ⚠️' : ''}</td>
+      <td>${fmtTel(m.telefone)}</td>
+      <td>${m.email || '—'}</td>
+      <td style="font-size:.8rem">${fmtData(m.created_at)}</td>
+      <td>
+        <div class="td-actions">
+          <button class="btn btn-ghost btn-sm btn-icon" onclick='openModalEditar(${JSON.stringify(m)})'>✏️</button>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="excluir(${m.id})">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openModalNovo() {
+  document.getElementById('modal-title').textContent = 'Novo Motorista';
+  document.getElementById('m-id').value = '';
+  document.getElementById('form-motorista').reset();
+  Modal.open('modal-motorista');
+}
+
+function openModalEditar(m) {
+  document.getElementById('modal-title').textContent = 'Editar Motorista';
+  document.getElementById('m-id').value = m.id;
+  const form = document.getElementById('form-motorista');
+  const fields = ['nome','cpf','cnh','cnh_validade','telefone','email','data_nascimento'];
+  fields.forEach(f => {
+    if (form[f]) form[f].value = ['cnh_validade','data_nascimento'].includes(f) ? toInputDate(m[f]) : (m[f] ?? '');
+  });
+  Modal.open('modal-motorista');
+}
+
+async function salvar() {
+  const id   = document.getElementById('m-id').value;
+  const data = formData(document.getElementById('form-motorista'));
+  data.cpf   = data.cpf.replace(/\D/g, '');
+  try {
+    if (id) {
+      await API.motoristas.update(id, data);
+      Toast.success('Motorista atualizado!');
+    } else {
+      await API.motoristas.create(data);
+      Toast.success('Motorista cadastrado!');
+    }
+    Modal.close('modal-motorista');
+    await loadMotoristas();
+  } catch (e) {
+    Toast.error(e.message || 'Erro ao salvar');
+  }
+}
+
+async function excluir(id) {
+  const ok = await confirmar('Excluir este motorista?');
+  if (!ok) return;
+  try {
+    await API.motoristas.delete(id);
+    Toast.success('Motorista excluído!');
+    await loadMotoristas();
+  } catch (e) {
+    Toast.error(e.message || 'Erro ao excluir');
+  }
+}
+
+function toggleMobileMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+</script>
+</body>
+</html>

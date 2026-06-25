@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Falls Car</title>
+  <link rel="stylesheet" href="../../css/main.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-mobile-menu" onclick="toggleMobileMenu()">☰</button>
+        <div>
+          <div class="page-title">Meu Perfil</div>
+          <div class="page-subtitle">Dados pessoais e de acesso</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div style="max-width:680px;margin:0 auto">
+
+        <div class="card" style="margin-bottom:var(--sp-lg)">
+          <div class="card-body" style="display:flex;align-items:center;gap:var(--sp-lg)">
+            <div id="perfil-avatar" style="width:72px;height:72px;border-radius:50%;background:var(--fc-blue);
+                display:flex;align-items:center;justify-content:center;font-size:2rem;color:#fff;font-weight:700;flex-shrink:0">
+              ?
+            </div>
+            <div>
+              <div id="perfil-nome" style="font-size:1.3rem;font-weight:800;color:var(--fc-text)">…</div>
+              <div id="perfil-email" style="color:var(--fc-text-muted)"></div>
+              <span class="badge badge-confirmada" style="margin-top:4px">Cliente</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('dados', this)">👤 Dados Pessoais</button>
+          <button class="tab-btn" onclick="switchTab('senha', this)">🔑 Alterar Senha</button>
+        </div>
+
+        <div id="tab-dados">
+          <div id="alert-dados" class="alert hidden" style="margin-bottom:var(--sp-md)"></div>
+
+          <div class="card">
+            <div class="card-body">
+              <form id="form-dados" novalidate>
+                <div class="form-row cols-2">
+                  <div class="form-group">
+                    <label class="form-label">Nome completo <span class="required">*</span></label>
+                    <input type="text" name="nome" id="inp-nome" class="form-control" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">E-mail <span class="required">*</span></label>
+                    <input type="email" name="email" id="inp-email" class="form-control" required>
+                  </div>
+                </div>
+                <div class="form-row cols-2">
+                  <div class="form-group">
+                    <label class="form-label">Telefone</label>
+                    <input type="tel" name="telefone" id="inp-tel" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Data de Nascimento</label>
+                    <input type="date" name="data_nascimento" id="inp-nasc" class="form-control">
+                  </div>
+                </div>
+                <div class="form-row cols-2">
+                  <div class="form-group">
+                    <label class="form-label">CPF</label>
+                    <input type="text" name="cpf" id="inp-cpf" class="form-control" maxlength="14" readonly
+                           style="background:#F7F8FA;cursor:not-allowed">
+                    <span class="form-hint">O CPF não pode ser alterado.</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">CNH</label>
+                    <input type="text" name="cnh" id="inp-cnh" class="form-control">
+                  </div>
+                </div>
+                <div class="form-row cols-2">
+                  <div class="form-group">
+                    <label class="form-label">Endereço</label>
+                    <input type="text" name="endereco" id="inp-end" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Cidade</label>
+                    <input type="text" name="cidade" id="inp-cidade" class="form-control">
+                  </div>
+                </div>
+                <div class="form-group" style="max-width:200px">
+                  <label class="form-label">CEP</label>
+                  <input type="text" name="cep" id="inp-cep" class="form-control" maxlength="9">
+                </div>
+                <button type="submit" class="btn btn-primary" id="btn-salvar-dados">
+                  Salvar alterações
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-senha" class="hidden">
+          <div id="alert-senha" class="alert hidden" style="margin-bottom:var(--sp-md)"></div>
+
+          <div class="card">
+            <div class="card-body">
+              <form id="form-senha" novalidate>
+                <div class="form-group">
+                  <label class="form-label">Senha atual <span class="required">*</span></label>
+                  <input type="password" name="senha_atual" class="form-control" required autocomplete="current-password">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Nova senha <span class="required">*</span></label>
+                  <input type="password" name="nova_senha" class="form-control" required
+                         placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Confirmar nova senha <span class="required">*</span></label>
+                  <input type="password" name="nova_senha_confirm" class="form-control" required autocomplete="new-password">
+                </div>
+                <button type="submit" class="btn btn-primary" id="btn-salvar-senha">
+                  Alterar senha
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../../js/utils.js"></script>
+<script>
+let clienteId = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = Auth.requireCliente();
+  if (!user) return;
+  renderClienteSidebar('perfil');
+
+  try {
+    const res = await API.auth.me();
+    const u   = res.data;
+    clienteId = u.cliente_id || u.id;
+
+    document.getElementById('perfil-avatar').textContent = (u.nome||'?').charAt(0).toUpperCase();
+    document.getElementById('perfil-nome').textContent   = u.nome   || '—';
+    document.getElementById('perfil-email').textContent  = u.email  || '—';
+
+    const fields = {
+      'inp-nome':   u.nome,
+      'inp-email':  u.email,
+      'inp-tel':    u.telefone,
+      'inp-nasc':   toInputDate(u.data_nascimento),
+      'inp-cpf':    fmtCPF(u.cpf),
+      'inp-cnh':    u.cnh,
+      'inp-end':    u.endereco,
+      'inp-cidade': u.cidade,
+      'inp-cep':    u.cep,
+    };
+    Object.entries(fields).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val || '';
+    });
+
+    Auth.save(localStorage.getItem('fc_token'), u);
+
+  } catch (e) {
+    Toast.error('Erro ao carregar perfil');
+  }
+
+  document.getElementById('form-dados').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const alertEl = document.getElementById('alert-dados');
+    alertEl.className = 'alert hidden';
+
+    const data = formData(document.getElementById('form-dados'));
+    delete data.cpf;
+    data.cpf = undefined;
+
+    document.getElementById('btn-salvar-dados').disabled = true;
+    try {
+      const res = await API.clientes.update(clienteId, data);
+      Toast.success('Perfil atualizado com sucesso!');
+      document.getElementById('perfil-nome').textContent = data.nome;
+      document.getElementById('perfil-email').textContent = data.email;
+      document.getElementById('perfil-avatar').textContent = data.nome.charAt(0).toUpperCase();
+    } catch (err) {
+      alertEl.className = 'alert alert-danger';
+      alertEl.textContent = err.message || 'Erro ao salvar dados';
+    } finally {
+      document.getElementById('btn-salvar-dados').disabled = false;
+    }
+  });
+
+  document.getElementById('form-senha').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const alertEl = document.getElementById('alert-senha');
+    alertEl.className = 'alert hidden';
+
+    const data = formData(document.getElementById('form-senha'));
+    if (data.nova_senha !== data.nova_senha_confirm) {
+      alertEl.className = 'alert alert-danger';
+      alertEl.textContent = 'As novas senhas não coincidem.';
+      return;
+    }
+    if (data.nova_senha.length < 6) {
+      alertEl.className = 'alert alert-danger';
+      alertEl.textContent = 'A nova senha deve ter no mínimo 6 caracteres.';
+      return;
+    }
+
+    document.getElementById('btn-salvar-senha').disabled = true;
+    try {
+      await API.clientes.update(clienteId, {
+        senha_atual: data.senha_atual,
+        nova_senha:  data.nova_senha,
+      });
+      alertEl.className = 'alert alert-success';
+      alertEl.textContent = 'Senha alterada com sucesso!';
+      document.getElementById('form-senha').reset();
+    } catch (err) {
+      alertEl.className = 'alert alert-danger';
+      alertEl.textContent = err.message || 'Erro ao alterar senha';
+    } finally {
+      document.getElementById('btn-salvar-senha').disabled = false;
+    }
+  });
+});
+
+function switchTab(tab, btn) {
+  ['dados','senha'].forEach(t => document.getElementById(`tab-${t}`).classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.remove('hidden');
+  btn.classList.add('active');
+}
+
+function toggleMobileMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+</script>
+</body>
+</html>

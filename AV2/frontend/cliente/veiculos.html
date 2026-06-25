@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veículos — Falls Car</title>
+  <link rel="stylesheet" href="../../css/main.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-mobile-menu" onclick="toggleMobileMenu()">☰</button>
+        <div>
+          <div class="page-title">Catálogo</div>
+          <div class="page-subtitle">Escolha seu veículo ideal</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <a href="reservar.html" class="btn btn-primary btn-sm">+ Fazer Reserva</a>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="filters-bar">
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search" placeholder="Buscar modelo, marca…" oninput="applyFilters()">
+        </div>
+        <select class="form-control" id="filter-categoria" onchange="applyFilters()" style="width:auto;min-width:140px">
+          <option value="">Todas as categorias</option>
+          <option value="economico">Econômico</option>
+          <option value="compacto">Compacto</option>
+          <option value="sedan">Sedan</option>
+          <option value="suv">SUV</option>
+          <option value="luxo">Luxo</option>
+          <option value="pickup">Pickup</option>
+        </select>
+        <select class="form-control" id="filter-loja" onchange="applyFilters()" style="width:auto;min-width:160px">
+          <option value="">Todas as lojas</option>
+        </select>
+        <select class="form-control" id="filter-ordem" onchange="applyFilters()" style="width:auto">
+          <option value="preco-asc">Menor preço</option>
+          <option value="preco-desc">Maior preço</option>
+          <option value="km-asc">Menor km</option>
+          <option value="ano-desc">Mais novo</option>
+        </select>
+      </div>
+
+      <div id="loading" class="loading" style="margin:var(--sp-2xl) auto">
+        <div class="spinner"></div>
+      </div>
+
+      <div id="grid-container" class="vehicles-grid hidden"></div>
+
+      <div id="empty" class="empty-state hidden">
+        <div class="empty-state-icon">🔍</div>
+        <h3>Nenhum veículo encontrado</h3>
+        <p>Tente outros filtros ou categorias.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../../js/utils.js"></script>
+<script>
+let allVeiculos = [];
+const EMOJIS = { economico:'🏎️', compacto:'🚘', sedan:'🚗', suv:'🚙', luxo:'✨', pickup:'🛻' };
+
+document.addEventListener('DOMContentLoaded', async () => {
+  Auth.requireCliente();
+  renderClienteSidebar('veiculos');
+  await Promise.all([loadVeiculos(), loadLojas()]);
+});
+
+async function loadVeiculos() {
+  try {
+    const res = await API.veiculos.list({ status: 'livre' });
+    allVeiculos = res.data || [];
+  } catch (e) {
+    Toast.error('Erro ao carregar veículos');
+    allVeiculos = [];
+  }
+  document.getElementById('loading').classList.add('hidden');
+  applyFilters();
+}
+
+async function loadLojas() {
+  try {
+    const res = await API.lojas.list();
+    const sel = document.getElementById('filter-loja');
+    (res.data || []).forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = l.nome;
+      sel.appendChild(opt);
+    });
+  } catch (e) {}
+}
+
+function applyFilters() {
+  const q    = document.getElementById('search').value.toLowerCase();
+  const cat  = document.getElementById('filter-categoria').value;
+  const loja = document.getElementById('filter-loja').value;
+  const ord  = document.getElementById('filter-ordem').value;
+
+  let list = allVeiculos.filter(v => {
+    const mQ   = !q    || `${v.modelo} ${v.marca}`.toLowerCase().includes(q);
+    const mCat = !cat  || v.categoria === cat;
+    const mLoja= !loja || String(v.loja_id) === loja;
+    return mQ && mCat && mLoja;
+  });
+
+  list = list.sort((a, b) => {
+    if (ord === 'preco-asc')  return Number(a.valor_diaria_7||0) - Number(b.valor_diaria_7||0);
+    if (ord === 'preco-desc') return Number(b.valor_diaria_7||0) - Number(a.valor_diaria_7||0);
+    if (ord === 'km-asc')     return Number(a.quilometragem||0) - Number(b.quilometragem||0);
+    if (ord === 'ano-desc')   return Number(b.ano||0) - Number(a.ano||0);
+    return 0;
+  });
+
+  renderGrid(list);
+}
+
+function renderGrid(lista) {
+  const grid  = document.getElementById('grid-container');
+  const empty = document.getElementById('empty');
+
+  if (!lista.length) {
+    grid.classList.add('hidden');
+    empty.classList.remove('hidden');
+    return;
+  }
+
+  empty.classList.add('hidden');
+  grid.classList.remove('hidden');
+  grid.innerHTML = lista.map(v => `
+    <div class="vehicle-card">
+      <div class="vehicle-img">
+        ${v.imagem_url
+          ? `<img src="${v.imagem_url}" alt="${v.modelo}" loading="lazy">`
+          : `<div style="font-size:4rem;display:flex;align-items:center;justify-content:center;height:100%">${EMOJIS[v.categoria]||'🚗'}</div>`
+        }
+      </div>
+      <div class="vehicle-body">
+        <div class="vehicle-name">${v.modelo}</div>
+        <div class="vehicle-brand">${v.marca} · ${v.ano}</div>
+        <div class="vehicle-specs">
+          <span class="spec-tag">⛽ ${v.combustivel||'flex'}</span>
+          <span class="spec-tag">🪑 ${v.capacidade_passageiros||5} lugares</span>
+          ${v.portas ? `<span class="spec-tag">🚪 ${v.portas}p</span>` : ''}
+          <span class="badge badge-${v.categoria}" style="margin:0">${v.categoria}</span>
+        </div>
+        <div style="font-size:.78rem;color:var(--fc-text-muted);margin-top:4px">📍 ${v.loja_cidade||v.loja_nome||'—'}</div>
+        <div class="vehicle-price">
+          <span class="price-amount">${fmtMoeda(v.valor_diaria_7)}</span>
+          <span class="price-period">/ dia (plano 7d)</span>
+        </div>
+      </div>
+      <div class="vehicle-footer">
+        <div style="font-size:.78rem;color:var(--fc-text-muted)">
+          15d: ${fmtMoeda(v.valor_diaria_15)}/dia · 30d: ${fmtMoeda(v.valor_diaria_30)}/dia
+        </div>
+        <a href="reservar.html?loja=${v.loja_id}&categoria=${v.categoria}" class="btn btn-primary btn-sm">Reservar</a>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleMobileMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+</script>
+</body>
+</html>

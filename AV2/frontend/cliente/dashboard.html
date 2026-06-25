@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minha Área — Falls Car</title>
+  <link rel="stylesheet" href="../../css/main.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-mobile-menu" onclick="toggleMobileMenu()">☰</button>
+        <div>
+          <div class="page-title" id="topbar-saudacao">Olá!</div>
+          <div class="page-subtitle">Área do cliente</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <a href="reservar.html" class="btn btn-primary btn-sm">+ Nova Reserva</a>
+      </div>
+    </div>
+
+    <div class="page-content">
+
+      <div id="reserva-ativa-section"></div>
+
+      <div class="stats-grid" id="stats-cliente" style="margin-top:0">
+        <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-value" id="st-total">—</div><div class="stat-label">Total de Reservas</div></div>
+        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="st-concluidas">—</div><div class="stat-label">Concluídas</div></div>
+        <div class="stat-card"><div class="stat-icon">🚗</div><div class="stat-value" id="st-ativa">—</div><div class="stat-label">Ativa Agora</div></div>
+        <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value" id="st-gasto">—</div><div class="stat-label">Total Investido</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-lg)">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Próximas Reservas</div>
+              <div class="card-subtitle">Confirmadas aguardando retirada</div>
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>#</th><th>Veículo</th><th>Retirada</th><th>Status</th></tr></thead>
+              <tbody id="tbody-proximas"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Histórico Recente</div>
+              <div class="card-subtitle">Últimas locações concluídas</div>
+            </div>
+            <a href="minhas-reservas.html" class="btn btn-outline btn-sm">Ver tudo</a>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>#</th><th>Veículo</th><th>Período</th><th>Total</th></tr></thead>
+              <tbody id="tbody-historico"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="cta-reserva" class="hidden">
+        <div class="empty-state">
+          <div class="empty-state-icon">🚗</div>
+          <h3>Nenhuma locação ainda</h3>
+          <p style="margin-bottom:var(--sp-lg)">Reserve um veículo agora e aproveite nossa frota!</p>
+          <a href="reservar.html" class="btn btn-primary btn-lg">Fazer primeira reserva</a>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../../js/utils.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = Auth.requireCliente();
+  if (!user) return;
+
+  renderClienteSidebar('dashboard');
+
+  const hora = new Date().getHours();
+  const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+  document.getElementById('topbar-saudacao').textContent = `${saudacao}, ${user.nome?.split(' ')[0]}!`;
+
+  try {
+    const res = await API.reservas.list();
+    const todas = res.data || [];
+
+    if (!todas.length) {
+      document.getElementById('cta-reserva').classList.remove('hidden');
+      document.getElementById('st-total').textContent = '0';
+      document.getElementById('st-concluidas').textContent = '0';
+      document.getElementById('st-ativa').textContent = 'Não';
+      document.getElementById('st-gasto').textContent = fmtMoeda(0);
+      return;
+    }
+
+    const ativa      = todas.find(r => r.status === 'ativa');
+    const concluidas = todas.filter(r => r.status === 'concluida');
+    const gasto      = todas.filter(r => r.status !== 'cancelada').reduce((s,r) => s + Number(r.valor_total||0), 0);
+
+    document.getElementById('st-total').textContent     = todas.length;
+    document.getElementById('st-concluidas').textContent = concluidas.length;
+    document.getElementById('st-ativa').textContent     = ativa ? 'Sim' : 'Não';
+    document.getElementById('st-gasto').textContent     = fmtMoeda(gasto);
+
+    if (ativa) {
+      document.getElementById('reserva-ativa-section').innerHTML = `
+        <div class="card" style="border-left:4px solid var(--fc-info);margin-bottom:var(--sp-lg)">
+          <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--sp-md)">
+            <div style="display:flex;align-items:center;gap:var(--sp-md)">
+              <div style="font-size:2.5rem">🚗</div>
+              <div>
+                <div style="font-size:.75rem;color:var(--fc-info);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Locação Ativa</div>
+                <div style="font-weight:700;font-size:1.1rem">${ativa.veiculo_modelo||'Veículo'}</div>
+                <div style="color:var(--fc-text-muted);font-size:.85rem">Devolução: ${fmtData(ativa.data_devolucao)}</div>
+              </div>
+            </div>
+            <span class="badge badge-ativa" style="padding:8px 16px;font-size:.9rem">Em andamento</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const proximas = todas.filter(r => r.status === 'confirmada');
+    const tbProx   = document.getElementById('tbody-proximas');
+    if (!proximas.length) {
+      tableEmpty(tbProx, 'Nenhuma reserva pendente', 4);
+    } else {
+      tbProx.innerHTML = proximas.map(r => `
+        <tr>
+          <td>#${r.id}</td>
+          <td>${r.veiculo_modelo||'—'}</td>
+          <td style="font-size:.82rem">${fmtData(r.data_retirada)}</td>
+          <td><span class="badge badge-confirmada">confirmada</span></td>
+        </tr>
+      `).join('');
+    }
+
+    const tbHist = document.getElementById('tbody-historico');
+    if (!concluidas.length) {
+      tableEmpty(tbHist, 'Nenhuma locação concluída', 4);
+    } else {
+      tbHist.innerHTML = concluidas.slice(0, 5).map(r => `
+        <tr>
+          <td>#${r.id}</td>
+          <td>${r.veiculo_modelo||'—'}</td>
+          <td style="font-size:.82rem">${fmtData(r.data_retirada)} → ${fmtData(r.data_devolucao)}</td>
+          <td><strong>${fmtMoeda(r.valor_total)}</strong></td>
+        </tr>
+      `).join('');
+    }
+
+  } catch (e) {
+    Toast.error('Erro ao carregar dados');
+  }
+});
+
+function toggleMobileMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+</script>
+</body>
+</html>

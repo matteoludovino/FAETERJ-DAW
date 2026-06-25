@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lojas — Falls Car Admin</title>
+  <link rel="stylesheet" href="../../css/main.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn-mobile-menu" onclick="toggleMobileMenu()">☰</button>
+        <div>
+          <div class="page-title">Lojas</div>
+          <div class="page-subtitle">Unidades da locadora</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary btn-sm" onclick="openModalNova()">+ Nova Loja</button>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="filters-bar">
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search" placeholder="Buscar nome, cidade…" oninput="applyFilters()">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nome</th>
+                <th>Cidade</th>
+                <th>Estado</th>
+                <th>Endereço</th>
+                <th>Telefone</th>
+                <th>Veículos</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-loja">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-title">Nova Loja</h3>
+      <button class="modal-close" onclick="Modal.close('modal-loja')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-loja" novalidate>
+        <input type="hidden" id="l-id">
+        <div class="form-group">
+          <label class="form-label">Nome <span class="required">*</span></label>
+          <input type="text" name="nome" class="form-control" placeholder="Falls Car — Aeroporto GIG" required>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label class="form-label">Cidade <span class="required">*</span></label>
+            <input type="text" name="cidade" class="form-control" placeholder="Rio de Janeiro" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estado <span class="required">*</span></label>
+            <input type="text" name="estado" class="form-control" placeholder="RJ" maxlength="2" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Endereço <span class="required">*</span></label>
+          <input type="text" name="endereco" class="form-control" placeholder="Av. Principal, 100" required>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label class="form-label">CEP</label>
+            <input type="text" name="cep" class="form-control" placeholder="00000-000" maxlength="9">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Telefone</label>
+            <input type="text" name="telefone" class="form-control" placeholder="(21) 3333-4444">
+          </div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label class="form-label">E-mail</label>
+            <input type="email" name="email" class="form-control" placeholder="loja@fallscar.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Horário</label>
+            <input type="text" name="horario_funcionamento" class="form-control" placeholder="08h–20h, seg–sáb">
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('modal-loja')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvar()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="../../js/config.js"></script>
+<script src="../../js/api.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../../js/utils.js"></script>
+<script>
+let allLojas = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  Auth.requireAdmin();
+  renderAdminSidebar('lojas');
+  await loadLojas();
+});
+
+async function loadLojas() {
+  tableLoading(document.getElementById('tbody'), 8);
+  try {
+    const res = await API.lojas.list();
+    allLojas = res.data || [];
+    applyFilters();
+  } catch (e) {
+    tableEmpty(document.getElementById('tbody'), 'Erro ao carregar lojas', 8);
+  }
+}
+
+function applyFilters() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const filtered = allLojas.filter(l =>
+    !q || `${l.nome} ${l.cidade}`.toLowerCase().includes(q)
+  );
+  renderTabela(filtered);
+}
+
+function renderTabela(lista) {
+  const tbody = document.getElementById('tbody');
+  if (!lista.length) { tableEmpty(tbody, 'Nenhuma loja encontrada', 8); return; }
+  tbody.innerHTML = lista.map(l => `
+    <tr>
+      <td>${l.id}</td>
+      <td><strong>${l.nome}</strong></td>
+      <td>${l.cidade}</td>
+      <td>${l.estado}</td>
+      <td style="font-size:.85rem">${l.endereco || '—'}</td>
+      <td>${fmtTel(l.telefone)}</td>
+      <td>${l.total_veiculos ?? '—'}</td>
+      <td>
+        <div class="td-actions">
+          <button class="btn btn-ghost btn-sm btn-icon" onclick='openModalEditar(${JSON.stringify(l)})'>✏️</button>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="excluir(${l.id})">🗑️</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openModalNova() {
+  document.getElementById('modal-title').textContent = 'Nova Loja';
+  document.getElementById('l-id').value = '';
+  document.getElementById('form-loja').reset();
+  Modal.open('modal-loja');
+}
+
+function openModalEditar(l) {
+  document.getElementById('modal-title').textContent = 'Editar Loja';
+  document.getElementById('l-id').value = l.id;
+  const form = document.getElementById('form-loja');
+  const fields = ['nome','cidade','estado','endereco','cep','telefone','email','horario_funcionamento'];
+  fields.forEach(f => { if (form[f]) form[f].value = l[f] ?? ''; });
+  Modal.open('modal-loja');
+}
+
+async function salvar() {
+  const id   = document.getElementById('l-id').value;
+  const data = formData(document.getElementById('form-loja'));
+  try {
+    if (id) {
+      await API.lojas.update(id, data);
+      Toast.success('Loja atualizada!');
+    } else {
+      await API.lojas.create(data);
+      Toast.success('Loja cadastrada!');
+    }
+    Modal.close('modal-loja');
+    await loadLojas();
+  } catch (e) {
+    Toast.error(e.message || 'Erro ao salvar');
+  }
+}
+
+async function excluir(id) {
+  const ok = await confirmar('Excluir esta loja? Veículos associados serão afetados.');
+  if (!ok) return;
+  try {
+    await API.lojas.delete(id);
+    Toast.success('Loja excluída!');
+    await loadLojas();
+  } catch (e) {
+    Toast.error(e.message || 'Erro ao excluir');
+  }
+}
+
+function toggleMobileMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+</script>
+</body>
+</html>
